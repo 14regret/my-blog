@@ -8,7 +8,6 @@ export default function MessageBoard() {
   const [content, setContent] = useState('')
   const isAdmin = localStorage.getItem('username') === 'admin'
 
-  // 【修复】直接把请求写在 useEffect 内部，解决报错
   useEffect(() => {
     request.get('/messages')
       .then(res => setMessages(res.data))
@@ -20,7 +19,6 @@ export default function MessageBoard() {
     if (!author.trim() || !content.trim()) return alert("请填写昵称和留言内容！")
     
     request.post('/messages', { author, content }).then(res => {
-      // 提交成功后，把新留言插到列表最前面
       setMessages([res.data, ...messages])
       setContent('')
       alert("留言成功！")
@@ -30,50 +28,90 @@ export default function MessageBoard() {
   const handleDelete = (id) => {
     if (window.confirm("确定要删除这条留言吗？")) {
       request.delete(`/messages/${id}`).then(() => {
-        // 删除成功后，过滤掉这条留言
         setMessages(messages.filter(m => m.id !== id))
       }).catch(err => console.error(err))
     }
   }
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1>💬 留言板</h1>
-        <Link to="/" className="btn btn-back">← 返回首页</Link>
+    <div className="danmaku-container">
+      {/* 1. 落叶飘落特效层 */}
+      <div className="leaf-shower">
+        <div className="leaf" style={{ left: '10%', animationDelay: '0s', animationDuration: '12s', fontSize: '24px' }}>🍁</div>
+        <div className="leaf" style={{ left: '25%', animationDelay: '2s', animationDuration: '15s', fontSize: '20px' }}>🍂</div>
+        <div className="leaf" style={{ left: '40%', animationDelay: '1s', animationDuration: '10s', fontSize: '18px' }}>🍃</div>
+        <div className="leaf" style={{ left: '55%', animationDelay: '4s', animationDuration: '18s', fontSize: '26px' }}>🍁</div>
+        <div className="leaf" style={{ left: '70%', animationDelay: '0.5s', animationDuration: '14s', fontSize: '22px' }}>🍂</div>
+        <div className="leaf" style={{ left: '85%', animationDelay: '3s', animationDuration: '16s', fontSize: '20px' }}>🍃</div>
+        <div className="leaf" style={{ left: '95%', animationDelay: '5s', animationDuration: '11s', fontSize: '24px' }}>🍁</div>
+        <div className="leaf" style={{ left: '5%', animationDelay: '6s', animationDuration: '17s', fontSize: '18px' }}>🍂</div>
+        <div className="leaf" style={{ left: '60%', animationDelay: '7s', animationDuration: '13s', fontSize: '22px' }}>🍁</div>
+        <div className="leaf" style={{ left: '30%', animationDelay: '8s', animationDuration: '19s', fontSize: '20px' }}>🍃</div>
       </div>
-      
-      <p style={{ color: '#94a3b8', marginBottom: '30px' }}>在这里留下你想说的话吧，无需登录即可留言。</p>
 
-      {/* 留言输入区 */}
-      <form onSubmit={handleSubmit} style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '20px', borderRadius: '8px', marginBottom: '30px' }}>
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-          <input type="text" placeholder="你的昵称" value={author} onChange={e => setAuthor(e.target.value)}
-            style={{ width: '200px', padding: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', outline: 'none' }} />
-        </div>
-        <textarea placeholder="写下你想说的话..." value={content} onChange={e => setContent(e.target.value)} rows="3"
-          style={{ width: '100%', padding: '10px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', boxSizing: 'border-box', marginBottom: '15px', outline: 'none', resize: 'vertical' }}></textarea>
-        <button type="submit" className="btn btn-primary" style={{ padding: '10px 30px' }}>发送留言</button>
-      </form>
+      {/* 2. 弹幕层 */}
+      <div className="danmaku-layer">
+        {messages.map((msg, index) => {
+          const topPosition = 15 + ((index * 7) % 60)
+          
+          // 【修改】速度降低一半：原本是 12~22秒，现在改成 24~34秒
+          const duration = 24 + (index % 5) * 4 
+          const delay = index * 3
 
-      {/* 留言列表 */}
-      <div>
-        {messages.length === 0 ? (
-          <p style={{ color: '#94a3b8', textAlign: 'center' }}>还没有人留言，快来抢占一楼吧！</p>
-        ) : (
-          messages.map(msg => (
-            <div key={msg.id} style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '15px', position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <p style={{ margin: 0, fontWeight: 'bold', color: '#64ffda', fontSize: '16px' }}>👤 {msg.author}</p>
-                {isAdmin && (
-                  <button onClick={() => handleDelete(msg.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}>删除</button>
-                )}
-              </div>
-              <p style={{ margin: '0 0 10px 0', color: '#e2e8f0', fontSize: '15px', lineHeight: '1.6' }}>{msg.content}</p>
-              <small style={{ color: '#64748b' }}>{new Date(msg.createdAt).toLocaleString('zh-CN', { hour12: false })}</small>
+          return (
+            <div 
+              key={msg.id} 
+              className="danmaku-item"
+              style={{ 
+                top: `${topPosition}%`, 
+                animationDuration: `${duration}s`,
+                animationDelay: `${delay}s`
+              }}
+            >
+              <span className="danmaku-author">👤 {msg.author}: </span>
+              <span className="danmaku-content">{msg.content}</span>
+              {isAdmin && (
+                <button onClick={() => handleDelete(msg.id)} className="danmaku-delete">X</button>
+              )}
             </div>
-          ))
-        )}
+          )
+        })}
+      </div>
+
+      {/* 3. 底部操作面板 */}
+      <div className="danmaku-control-panel">
+        <div className="header" style={{ marginBottom: '15px', paddingBottom: '10px' }}>
+          <h2 style={{ margin: 0, color: '#ffd700', textShadow: '0 0 10px rgba(255, 215, 0, 0.5)' }}>💬 全屏留言弹幕</h2>
+          <Link to="/" className="btn btn-back">← 返回首页</Link>
+        </div>
+        
+        <p style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '15px' }}>
+          发送的留言会化作弹幕飘过屏幕，无需登录即可发送。
+        </p>
+
+        <form onSubmit={handleSubmit} className="danmaku-form">
+          <input 
+            type="text" 
+            placeholder="你的昵称" 
+            value={author} 
+            onChange={e => setAuthor(e.target.value)}
+            className="danmaku-input" 
+            style={{ width: '150px', marginBottom: '10px' }}
+          />
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input 
+              type="text" 
+              placeholder="写下你想说的话..." 
+              value={content} 
+              onChange={e => setContent(e.target.value)}
+              className="danmaku-input" 
+              style={{ flex: 1 }}
+            />
+            <button type="submit" className="btn btn-primary" style={{ padding: '0 20px', backgroundColor: '#ff6b9e' }}>
+              发射弹幕
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
