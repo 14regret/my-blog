@@ -2,10 +2,20 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import request from './axiosConfig'
 
+// 【修复】把 StatCard 组件提取到最外层，避免重复创建
+const StatCard = ({ title, value, icon, color }) => (
+  <div className="glass-card" style={{ flex: 1, minWidth: '200px', textAlign: 'center', padding: '25px' }}>
+    <div style={{ fontSize: '30px', marginBottom: '10px' }}>{icon}</div>
+    <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '5px' }}>{title}</div>
+    <div style={{ fontSize: '28px', fontWeight: 'bold', color: color }}>{value}</div>
+  </div>
+)
+
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState('posts')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [posts, setPosts] = useState([])
   const [comments, setComments] = useState([])
+  const [stats, setStats] = useState(null)
   const navigate = useNavigate()
   
   const currentUsername = localStorage.getItem('username')
@@ -18,31 +28,25 @@ export default function Admin() {
       return
     }
 
-    // 这里把后台拉取的文章数量放大，为了能看到草稿
-    request.get('/posts?page=0&size=100')
-      .then(res => setPosts(res.data.content))
-      .catch(err => console.error(err))
+    request.get('/posts?page=0&size=100').then(res => setPosts(res.data.content)).catch(err => console.error(err))
+    request.get('/comments').then(res => setComments(res.data)).catch(err => console.error(err))
+    
+    // 拉取统计数据
+    request.get('/stats')
+      .then(res => setStats(res.data))
+      .catch(err => console.error("获取统计数据失败:", err))
 
-    request.get('/comments')
-      .then(res => setComments(res.data))
-      .catch(err => console.error(err))
   }, [navigate, currentUsername])
 
   const handleDeletePost = (id) => {
     if (window.confirm("确定要删除这篇文章吗？")) {
-      request.delete(`/posts/${id}`).then(() => {
-        setPosts(posts.filter(p => p.id !== id))
-      }).catch(err => {
-        alert(err.response?.data || "无权删除")
-      })
+      request.delete(`/posts/${id}`).then(() => setPosts(posts.filter(p => p.id !== id))).catch(err => alert(err.response?.data || "无权删除"))
     }
   }
 
   const handleDeleteComment = (id) => {
     if (window.confirm("确定要删除这条评论吗？")) {
-      request.delete(`/comments/${id}`).then(() => {
-        setComments(comments.filter(c => c.id !== id))
-      }).catch(err => console.error(err))
+      request.delete(`/comments/${id}`).then(() => setComments(comments.filter(c => c.id !== id))).catch(err => console.error(err))
     }
   }
 
@@ -55,17 +59,32 @@ export default function Admin() {
         <Link to="/" className="btn btn-back">← 返回前台</Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button className={`btn ${activeTab === 'posts' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('posts')}>
-          📝 文章管理 ({displayPosts.length})
-        </button>
-        <button className={`btn ${activeTab === 'comments' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('comments')}>
-          💬 评论管理 ({comments.length})
-        </button>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <button className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('dashboard')}>📊 数据总览</button>
+        <button className={`btn ${activeTab === 'posts' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('posts')}>📝 文章管理 ({displayPosts.length})</button>
+        <button className={`btn ${activeTab === 'comments' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('comments')}>💬 评论管理 ({comments.length})</button>
       </div>
 
-      <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-        {activeTab === 'posts' ? (
+      {/* 数据总览面板 */}
+      {activeTab === 'dashboard' && stats && (
+        <div>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
+            <StatCard title="总文章数" value={stats.totalPosts} icon="📚" color="#64ffda" />
+            <StatCard title="总浏览量" value={stats.totalViews} icon="👁️" color="#60a5fa" />
+            <StatCard title="总点赞数" value={stats.totalLikes} icon="❤️" color="#ff6b9e" />
+            <StatCard title="总评论数" value={stats.totalComments} icon="💬" color="#fcd34d" />
+          </div>
+          
+          <div className="glass-card" style={{ textAlign: 'center', padding: '40px' }}>
+            <h3 style={{ color: '#fff', marginBottom: '20px' }}>🚀 站点运行良好</h3>
+            <p style={{ color: '#94a3b8' }}>持续创作，用文字记录生活与技术！</p>
+          </div>
+        </div>
+      )}
+
+      {/* 文章管理 */}
+      {activeTab === 'posts' && (
+        <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <tr>
@@ -82,7 +101,6 @@ export default function Admin() {
                   <td style={{ padding: '15px', color: '#94a3b8' }}>{post.id}</td>
                   <td style={{ padding: '15px', color: '#fff', fontWeight: 'bold' }}>
                     {post.title}
-                    {/* 新增草稿标签 */}
                     {post.isDraft && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>草稿</span>}
                   </td>
                   <td style={{ padding: '15px', color: '#64ffda' }}>{post.author}</td>
@@ -95,7 +113,12 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
-        ) : (
+        </div>
+      )}
+
+      {/* 评论管理 */}
+      {activeTab === 'comments' && (
+        <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <tr>
@@ -120,8 +143,8 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

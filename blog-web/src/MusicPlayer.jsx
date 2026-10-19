@@ -1,6 +1,6 @@
-import { useState, useRef, } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
-// 【配置歌单】把你的歌放在 public/music/ 目录下，在这里添加对应的文件名和歌曲名
+// 配置歌单（这里的名字你可以随便改）
 const playlist = [
   { name: '🎵 说好不哭', url: '/music/song1.mp3' },
   { name: '🌸 关键词', url: '/music/song2.mp3' },
@@ -13,43 +13,58 @@ const playlist = [
 
 export default function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(0) // 当前播放的歌曲索引
+  const [currentIndex, setCurrentIndex] = useState(0) 
   const audioRef = useRef(null)
 
+  // 监听歌曲切换：如果当前是播放状态，自动播放下一首
+  useEffect(() => {
+    if (isPlaying && audioRef.current) {
+      // 延迟 100ms 等待浏览器加载新的 src，然后播放
+      const timer = setTimeout(() => {
+        audioRef.current.play().catch(err => {
+          console.log("浏览器拦截了自动播放，请重新点击唱片:", err)
+          setIsPlaying(false) // 如果被拦截，将状态设为暂停
+        })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [currentIndex, isPlaying])
+
+  // 点击唱片：播放/暂停
   const togglePlay = () => {
     if (isPlaying) {
       audioRef.current.pause()
+      setIsPlaying(false)
     } else {
       audioRef.current.play()
+      setIsPlaying(true)
     }
-    setIsPlaying(!isPlaying)
   }
 
-  // 切换歌曲
+  // 播放结束：自动切下一首
+  const handleEnded = () => {
+    // 计算下一首的索引（如果到结尾了，就回到第一首）
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % playlist.length)
+    // 注意：这里不要改变 isPlaying 的状态，让它保持 true 触发上面的 useEffect
+  }
+
+  // 手动下拉切歌
   const handleSongChange = (e) => {
     const newIndex = Number(e.target.value)
     setCurrentIndex(newIndex)
-    
-    // 如果当前是播放状态，切换歌曲后自动继续播放
-    if (isPlaying) {
-      setTimeout(() => {
-        audioRef.current.play()
-      }, 100)
-    }
+    // 切换后保持当前的播放状态不变
   }
 
   return (
     <div className="music-player">
-      {/* 隐藏原生音频标签，绑定当前播放的 URL */}
       <audio 
         ref={audioRef} 
         src={playlist[currentIndex].url} 
-        loop 
+        onEnded={handleEnded}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
       
-      {/* 左侧旋转唱片 */}
       <div 
         className={`music-disc ${isPlaying ? 'rotating' : ''}`} 
         onClick={togglePlay}
@@ -58,7 +73,6 @@ export default function MusicPlayer() {
         💿
       </div>
       
-      {/* 右侧控制区：歌曲选择 + 播放状态 */}
       <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '12px' }}>
         <select 
           value={currentIndex}

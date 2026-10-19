@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import Fuse from 'fuse.js'
 import request from './axiosConfig'
 import PostDetail from './PostDetail'
 import PostEditor from './PostEditor'
@@ -21,6 +22,7 @@ const getPlainText = (markdown) => {
 
 function Home() {
   const [posts, setPosts] = useState([])
+  const [allPosts, setAllPosts] = useState([]) // 用于搜索的全量数据
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   
@@ -45,19 +47,43 @@ function Home() {
     }
   }, [charIndex, fullSubtitle])
 
+  // 1. 初始化时拉取全量数据用于前端搜索
   useEffect(() => {
-    let url = `/posts?page=${page}&size=${pageSize}`
-    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`
-    if (filterType === 'category') url += `&category=${filterValue}`
-    if (filterType === 'tag') url += `&tag=${filterValue}`
+    request.get('/posts?page=0&size=999').then(res => {
+      setAllPosts(res.data.content)
+    }).catch(err => console.error(err))
+  }, [])
 
-    request.get(url)
-      .then(res => {
+  // 2. 页面展示逻辑
+  useEffect(() => {
+    if (keyword) {
+      // 【搜索模式】使用 Fuse.js 进行前端高性能模糊搜索
+      const fuse = new Fuse(allPosts, {
+        keys: ['title', 'content', 'tags'], // 搜索的字段
+        threshold: 0.4, // 容错率（0.4表示允许部分拼写错误）
+        includeScore: true
+      })
+      const results = fuse.search(keyword).map(result => result.item)
+      
+      // 【修复】使用 setTimeout 将同步 setState 变成异步，消除 ESLint 警告
+      const timer = setTimeout(() => {
+        setPosts(results)
+        setTotalPages(0) // 前端搜索不分页，直接全量展示
+      }, 0)
+      
+      return () => clearTimeout(timer)
+    } else {
+      // 【常规浏览模式】走后端分页和分类标签筛选
+      let url = `/posts?page=${page}&size=${pageSize}`
+      if (filterType === 'category') url += `&category=${filterValue}`
+      if (filterType === 'tag') url += `&tag=${filterValue}`
+
+      request.get(url).then(res => {
         setPosts(res.data.content)
         setTotalPages(res.data.totalPages)
-      })
-      .catch(err => console.error(err))
-  }, [page, filterType, filterValue, keyword])
+      }).catch(err => console.error(err))
+    }
+  }, [page, filterType, filterValue, keyword, allPosts])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -106,13 +132,13 @@ function Home() {
           <div className="glass-card">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '15px', marginBottom: '15px' }}>
               <h3 style={{ border: 'none', margin: 0, padding: 0, flexShrink: 0 }}>
-                📚 {keyword ? '搜索结果' : filterType ? '筛选结果' : '最新文章列表'}
+                📚 {keyword ? `Fuse搜索: "${keyword}"` : filterType ? '筛选结果' : '最新文章列表'}
               </h3>
               
               <form onSubmit={handleSearch} style={{ display: 'flex', gap: '5px' }}>
                 <input 
                   type="text" 
-                  placeholder="搜索文章标题或内容..." 
+                  placeholder="支持错别字全文搜索..." 
                   value={searchInput} 
                   onChange={e => setSearchInput(e.target.value)}
                   style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', outline: 'none', width: '180px' }}
@@ -149,7 +175,8 @@ function Home() {
               )}
             </ul>
 
-            {totalPages > 0 && (
+            {/* 只有在非搜索模式下，才显示分页 */}
+            {!keyword && totalPages > 0 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
                 <button className="btn btn-back" disabled={page === 0} onClick={() => setPage(page - 1)}>上一页</button>
                 <span style={{ color: '#cbd5e1', fontSize: '14px' }}>第 {page + 1} / {totalPages} 页</span>
@@ -168,30 +195,6 @@ function Home() {
         </div>
 
         <div className="sidebar-column">
-          {/* 新增：联系与订阅卡片 */}
-          <div className="glass-card">
-            <h3>✉️ 联系与订阅</h3>
-            <p style={{ color: '#cbd5e1', fontSize: '13px', marginBottom: '15px' }}>
-              订阅我的博客，第一时间获取最新文章推送！
-            </p>
-            <form 
-              onSubmit={(e) => { e.preventDefault(); alert('订阅成功！(演示功能)'); e.target.reset(); }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}
-            >
-              <input 
-                type="email" 
-                placeholder="输入你的邮箱..." 
-                required
-                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', outline: 'none' }}
-              />
-              <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '13px' }}>立即订阅</button>
-            </form>
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px' }}>
-              <a href="https://github.com/14regret" target="_blank" rel="noreferrer" style={{ color: '#cbd5e1', fontSize: '20px' }} title="GitHub">🐙</a>
-              <a href="mailto:your-email@example.com" style={{ color: '#cbd5e1', fontSize: '20px' }} title="Email">✉️</a>
-            </div>
-          </div>
-
           <div className="glass-card">
             <h3>👋 关于我</h3>
             <div style={{ textAlign: 'center', marginTop: '10px' }}>
@@ -221,6 +224,15 @@ function Home() {
               <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('category', '技术分享')}>技术分享</span>
               <span className="tag tag-pink" style={{ cursor: 'pointer' }} onClick={() => handleFilter('category', '生活随笔')}>生活随笔</span>
               <span className="tag tag-yellow" style={{ cursor: 'pointer' }} onClick={() => handleFilter('category', '二次元')}>二次元</span>
+            </div>
+          </div>
+
+          <div className="glass-card">
+            <h3>🏷️ 热门标签</h3>
+            <div className="tags">
+              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'Java')}>Java</span>
+              <span className="tag tag-pink" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'React')}>React</span>
+              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', '前端')}>前端</span>
             </div>
           </div>
 
