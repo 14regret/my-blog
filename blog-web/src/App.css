@@ -30,6 +30,7 @@ body::before {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 1000;
 }
+
 .navbar-inner {
   max-width: 1200px; 
   margin: 0 auto;
@@ -39,6 +40,7 @@ body::before {
   justify-content: space-between;
   align-items: center;
 }
+
 .navbar-logo {
   font-size: 20px;
   font-weight: 700;
@@ -46,11 +48,8 @@ body::before {
   text-decoration: none;
   text-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
-.navbar-links { 
-  display: flex; 
-  gap: 25px; 
-  align-items: center; 
-}
+
+.navbar-links { display: flex; gap: 25px; align-items: center; }
 .nav-item {
   text-decoration: none;
   color: rgba(255, 255, 255, 0.7);
@@ -108,10 +107,7 @@ body::before {
   animation: blink 0.8s step-end infinite;
   box-shadow: 0 0 8px #ff6b9e;
 }
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* ====== 首页两列布局 ====== */
 .masonry-grid {
@@ -124,9 +120,7 @@ body::before {
   gap: 20px;
   align-items: start; 
 }
-@media (max-width: 900px) {
-  .masonry-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 900px) { .masonry-grid { grid-template-columns: 1fr; } }
 .sidebar-column { display: flex; flex-direction: column; gap: 20px; }
 .glass-card {
   background: rgba(30, 30, 35, 0.65);
@@ -173,15 +167,16 @@ body::before {
 .btn-back { color: #94a3b8; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); }
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
-/* ====== 详情页/编辑页/归档页容器 ====== */
+/* ====== 默认容器（单列页面如编辑、归档） ====== */
 .container {
   max-width: 900px; margin: 100px auto 40px auto; padding: 30px; background: rgba(30, 30, 35, 0.75); backdrop-filter: blur(15px); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .header h1 { margin: 0; color: #fff; font-size: 28px; }
-.post-content { font-size: 17px; line-height: 1.8; color: #cbd5e1; text-align: left; }
+.post-content { font-size: 17px; line-height: 1.8; color: #cbd5e1; text-align: left; word-break: break-word; }
 .post-content img { max-width: 100%; border-radius: 8px; margin: 20px 0; }
 .post-content blockquote { border-left: 4px solid #64ffda; padding-left: 15px; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 0 8px 8px 0; }
+.post-content h1, .post-content h2, .post-content h3, .post-content h4 { scroll-margin-top: 100px; }
 
 /* ====== 表单样式 ====== */
 .form-group { margin-bottom: 20px; }
@@ -199,82 +194,79 @@ body::before {
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 /* ====================================================================
+   文章详情页左右分栏布局 (TOC)
+   ==================================================================== */
+@media (min-width: 1300px) {
+  .post-layout-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px; 
+    max-width: 1350px; 
+    margin: 0 auto;
+    padding: 100px 20px 0 20px; /* 顶部留 100px 避开导航栏 */
+    gap: 40px; 
+    align-items: start;
+  }
+  .post-layout-container .container {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 40px 0;
+  }
+}
+
+@media (max-width: 1299px) {
+  .toc-sidebar { display: none; }
+}
+
+.toc-sidebar { position: relative; width: 280px; }
+.toc-container {
+  position: sticky;
+  top: 100px; 
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  background: rgba(30, 30, 35, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.toc-container::-webkit-scrollbar { width: 4px; }
+.toc-container::-webkit-scrollbar-thumb { background: rgba(100, 255, 218, 0.3); border-radius: 4px; }
+.toc-container::-webkit-scrollbar-thumb:hover { background: rgba(100, 255, 218, 0.8); }
+.toc-title { margin: 0 0 15px 0; padding-bottom: 10px; font-size: 15px; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.toc-list { list-style: none; padding: 0; margin: 0; }
+.toc-item { margin-bottom: 8px; line-height: 1.4; }
+.toc-item a { color: #94a3b8; text-decoration: none; font-size: 13px; transition: all 0.2s; display: block; padding-left: 10px; border-left: 2px solid transparent; word-break: break-all; }
+.toc-item a:hover { color: #fff; }
+.toc-level-h1 a { padding-left: 0; font-weight: bold; font-size: 14px; color: #e2e8f0; }
+.toc-level-h2 a { padding-left: 10px; }
+.toc-level-h3 a { padding-left: 20px; font-size: 12px; }
+.toc-level-h4 a { padding-left: 30px; font-size: 12px; }
+.toc-item.active a { color: #64ffda; border-left-color: #64ffda; background: linear-gradient(90deg, rgba(100, 255, 218, 0.1) 0%, transparent 100%); font-weight: bold; }
+
+/* ====================================================================
    留言板专属：落叶与弹幕特效
    ==================================================================== */
 .danmaku-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-
-/* 落叶特效层 */
-.leaf-shower {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.leaf {
-  position: absolute;
-  top: -10vh;
-  opacity: 0;
-  /* 使用带有左右摇摆的动画 */
-  animation-name: fallAndSway;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-/* 随意飘落的动画关键帧 */
+.leaf-shower { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.leaf { position: absolute; top: -10vh; opacity: 0; animation-name: fallAndSway; animation-timing-function: linear; animation-iteration-count: infinite; }
 @keyframes fallAndSway {
-  0% { 
-    transform: translateY(0) translateX(0) rotate(0deg); 
-    opacity: 0; 
-  }
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
   10% { opacity: 0.8; }
-  25% { 
-    transform: translateY(30vh) translateX(30px) rotate(45deg); 
-  }
-  50% { 
-    transform: translateY(50vh) translateX(-20px) rotate(90deg); 
-  }
-  75% { 
-    transform: translateY(80vh) translateX(40px) rotate(135deg); 
-  }
+  25% { transform: translateY(30vh) translateX(30px) rotate(45deg); }
+  50% { transform: translateY(50vh) translateX(-20px) rotate(90deg); }
+  75% { transform: translateY(80vh) translateX(40px) rotate(135deg); }
   90% { opacity: 0.8; }
-  100% { 
-    transform: translateY(110vh) translateX(0) rotate(180deg); 
-    opacity: 0; 
-  }
+  100% { transform: translateY(110vh) translateX(0) rotate(180deg); opacity: 0; }
 }
-
-/* 弹幕层 */
 .danmaku-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-.danmaku-item { 
-  position: absolute; right: -100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); 
-  border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 20px; padding: 8px 20px; 
-  display: flex; align-items: center; gap: 10px; white-space: nowrap; pointer-events: auto; 
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); 
-  animation-name: scrollLeft; animation-timing-function: linear; animation-iteration-count: infinite; 
-}
+.danmaku-item { position: absolute; right: -100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 20px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; white-space: nowrap; pointer-events: auto; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); animation-name: scrollLeft; animation-timing-function: linear; animation-iteration-count: infinite; }
 .danmaku-item:hover { animation-play-state: paused; border-color: #ffd700; }
 .danmaku-author { color: #ffd700; font-weight: bold; font-size: 14px; }
 .danmaku-content { color: #ffd700; font-size: 15px; }
 .danmaku-delete { background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 5px; }
 @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-250vw); } }
-
-/* 【修改】底部控制面板：变窄、上移 */
-.danmaku-control-panel { 
-  position: absolute; 
-  bottom: 80px; /* 往上移了 */
-  left: 50%; 
-  transform: translateX(-50%); 
-  width: 90%; 
-  max-width: 600px; /* 长度变小 */
-  background: rgba(15, 15, 20, 0.4); 
-  backdrop-filter: blur(15px); 
-  border: 1px solid rgba(255, 215, 0, 0.2); 
-  border-radius: 16px; 
-  padding: 20px 25px; 
-  z-index: 10; 
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); 
-}
+.danmaku-control-panel { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(15px); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 16px; padding: 20px 25px; z-index: 10; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
 .danmaku-form { display: flex; flex-direction: column; }
 .danmaku-input { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; padding: 10px 15px; border-radius: 8px; outline: none; font-size: 15px; transition: all 0.3s; }
 .danmaku-input::placeholder { color: rgba(255, 215, 0, 0.4); }
