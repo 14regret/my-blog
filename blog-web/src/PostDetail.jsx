@@ -12,6 +12,9 @@ export default function PostDetail() {
   const [commentAuthor, setCommentAuthor] = useState('')
   const [commentContent, setCommentContent] = useState('')
   const [hasLiked, setHasLiked] = useState(false)
+  
+  // Lightbox 状态
+  const [lightboxSrc, setLightboxSrc] = useState(null)
 
   // === TOC 目录相关状态 ===
   const [toc, setToc] = useState([])
@@ -38,23 +41,15 @@ export default function PostDetail() {
     return () => clearTimeout(timer)
   }, [id])
 
-  // === 核心：生成目录 & 监听滚动高亮 ===
   useEffect(() => {
     if (!post || !contentRef.current) return
-
-    // 1. 提取所有标题
     const headers = Array.from(contentRef.current.querySelectorAll('h1, h2, h3, h4'))
     let tocData = headers.map((header, index) => {
       const headingId = header.id || `heading-${index}`
       header.id = headingId
-      return {
-        id: headingId,
-        text: header.innerText,
-        level: header.tagName.toLowerCase()
-      }
+      return { id: headingId, text: header.innerText, level: header.tagName.toLowerCase() }
     })
 
-    // 【兜底逻辑】如果文章里没有写任何 Markdown 标题
     if (tocData.length === 0) {
       tocData = [
         { id: 'post-title', text: '文章标题', level: 'h2' },
@@ -62,46 +57,31 @@ export default function PostDetail() {
         { id: 'post-comments', text: '前往评论区', level: 'h2' }
       ]
     }
-
     setToc(tocData)
 
-    // 2. 监听滚动，高亮当前所在的章节
     const handleScroll = () => {
       let currentId = ''
-      
       if (tocData.length === 3 && tocData[0].id === 'post-title') {
         const titleEl = document.getElementById('post-title')
         const commentEl = document.getElementById('post-comments')
-        
-        if (commentEl && commentEl.getBoundingClientRect().top <= 120) {
-          currentId = 'post-comments'
-        } else if (titleEl && titleEl.getBoundingClientRect().top <= 120) {
-          currentId = 'post-content'
-        } else {
-          currentId = 'post-title'
-        }
+        if (commentEl && commentEl.getBoundingClientRect().top <= 120) currentId = 'post-comments'
+        else if (titleEl && titleEl.getBoundingClientRect().top <= 120) currentId = 'post-content'
+        else currentId = 'post-title'
       } else {
         for (let header of headers) {
-          const rect = header.getBoundingClientRect()
-          if (rect.top <= 120) {
-            currentId = header.id
-          } else {
-            break
-          }
+          if (header.getBoundingClientRect().top <= 120) currentId = header.id
+          else break
         }
         if (!currentId && headers.length > 0) currentId = headers[0].id
       }
-      
       if (currentId) setActiveId(currentId)
     }
 
     window.addEventListener('scroll', handleScroll)
     handleScroll()
-
     return () => window.removeEventListener('scroll', handleScroll)
   }, [post])
 
-  // === 点击目录平滑跳转 ===
   const scrollToHeading = (e, headingId) => {
     e.preventDefault()
     const element = document.getElementById(headingId)
@@ -155,9 +135,20 @@ export default function PostDetail() {
     }
   }
 
+  // 复制链接
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert("链接已复制到剪贴板！")
+    }).catch(() => {
+      alert("复制失败，请手动复制浏览器地址栏链接。")
+    })
+  }
+
   if (!post) return <h2 style={{ textAlign: 'center', marginTop: '100px', color: '#fff' }}>文章加载中...</h2>
 
   const canModify = isAdmin || (currentUsername && currentUsername === post.author)
+  const shareTitle = encodeURIComponent(post.title)
+  const shareUrl = encodeURIComponent(window.location.href)
 
   return (
     <div className="post-layout-container">
@@ -172,7 +163,7 @@ export default function PostDetail() {
             </div>
           )}
           
-          <h1 id="post-title" style={{ fontSize: '32px', color: '#fff', marginBottom: '10px', marginTop: 0 }}>{post.title}</h1>
+          <h1 id="post-title" style={{ fontSize: '32px', color: 'var(--text-primary)', marginBottom: '10px', marginTop: 0 }}>{post.title}</h1>
           
           <div style={{ display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
             <span>作者: {post.author}</span>
@@ -184,10 +175,38 @@ export default function PostDetail() {
           <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '20px 0' }} />
 
           <div className="post-content" id="post-content" ref={contentRef}>
-            <ReactMarkdown>{post.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                // 拦截 img 标签，点击时触发 Lightbox
+                img: ({ ...props }) => (
+                  <img 
+                    {...props} 
+                    style={{ cursor: 'zoom-in', maxWidth: '100%', borderRadius: '8px', margin: '20px 0' }} 
+                    onClick={() => setLightboxSrc(props.src)} 
+                    alt={props.alt || '图片'} 
+                  />
+                )
+              }}
+            >
+              {post.content}
+            </ReactMarkdown>
           </div>
 
-          <div style={{ textAlign: 'center', margin: '50px 0' }}>
+          {/* 底部操作区：分享与点赞 */}
+          <div style={{ textAlign: 'center', margin: '40px 0', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '30px' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '20px' }}>
+              <button onClick={handleCopyLink} className="btn btn-back" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                🔗 复制链接
+              </button>
+              <a href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`} target="_blank" rel="noreferrer" className="btn btn-back" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px', color: '#1DA1F2' }}>
+                🐦 分享到 Twitter
+              </a>
+              <a href={`http://service.weibo.com/share/share.php?title=${shareTitle}&url=${shareUrl}`} target="_blank" rel="noreferrer" className="btn btn-back" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px', color: '#E6162D' }}>
+                🔴 分享到微博
+              </a>
+            </div>
+
             <button onClick={handleLike} disabled={hasLiked} style={{ background: 'none', border: 'none', cursor: hasLiked ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 auto' }}>
               <div style={{ fontSize: '40px', filter: hasLiked ? 'none' : 'grayscale(100%)', transition: 'transform 0.2s', transform: hasLiked ? 'scale(1.1)' : 'scale(1)' }}>❤️</div>
               <span style={{ color: hasLiked ? '#ff6b9e' : '#94a3b8', fontSize: '14px', marginTop: '5px' }}>{post.likes || 0} 人点赞</span>
@@ -195,7 +214,7 @@ export default function PostDetail() {
           </div>
 
           <div id="post-comments" style={{ marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-            <h3 style={{ color: '#fff' }}>💬 评论区 ({comments.length})</h3>
+            <h3 style={{ color: 'var(--text-primary)' }}>💬 评论区 ({comments.length})</h3>
             <form onSubmit={handleCommentSubmit} style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                 <input type="text" placeholder="你的昵称" value={commentAuthor} onChange={e => setCommentAuthor(e.target.value)} style={{ width: '200px', padding: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', outline: 'none' }} />
@@ -216,7 +235,7 @@ export default function PostDetail() {
                         <button onClick={() => handleDeleteComment(c.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}>删除</button>
                       )}
                     </div>
-                    <p style={{ margin: '0 0 8px 0', color: '#e2e8f0', fontSize: '15px', lineHeight: '1.6' }}>{c.content}</p>
+                    <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.6' }}>{c.content}</p>
                     <small style={{ color: '#64748b' }}>{new Date(c.createdAt).toLocaleString('zh-CN', { hour12: false })}</small>
                   </div>
                 ))
@@ -232,23 +251,22 @@ export default function PostDetail() {
             <h4 className="toc-title">📑 文章目录</h4>
             <ul className="toc-list">
               {toc.map(item => (
-                <li 
-                  key={item.id} 
-                  className={`toc-item toc-level-${item.level} ${activeId === item.id ? 'active' : ''}`}
-                >
-                  <a 
-                    href={`#${item.id}`} 
-                    onClick={(e) => scrollToHeading(e, item.id)}
-                  >
-                    {item.text}
-                  </a>
+                <li key={item.id} className={`toc-item toc-level-${item.level} ${activeId === item.id ? 'active' : ''}`}>
+                  <a href={`#${item.id}`} onClick={(e) => scrollToHeading(e, item.id)}>{item.text}</a>
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
-      
+
+      {/* Lightbox 图片放大遮罩层 */}
+      {lightboxSrc && (
+        <div className="lightbox-overlay" onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="Zoomed" className="lightbox-img" />
+          <button className="lightbox-close">✖</button>
+        </div>
+      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ import Navbar from './Navbar'
 import Admin from './Admin'
 import Archive from './Archive'
 import MessageBoard from './MessageBoard'
-import MusicPlayer from './MusicPlayer' // 【修复】引入音乐播放器
+import MusicPlayer from './MusicPlayer'
 import './App.css'
 
 const getPlainText = (markdown) => {
@@ -168,6 +168,30 @@ function Home() {
         </div>
 
         <div className="sidebar-column">
+          {/* 新增：联系与订阅卡片 */}
+          <div className="glass-card">
+            <h3>✉️ 联系与订阅</h3>
+            <p style={{ color: '#cbd5e1', fontSize: '13px', marginBottom: '15px' }}>
+              订阅我的博客，第一时间获取最新文章推送！
+            </p>
+            <form 
+              onSubmit={(e) => { e.preventDefault(); alert('订阅成功！(演示功能)'); e.target.reset(); }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}
+            >
+              <input 
+                type="email" 
+                placeholder="输入你的邮箱..." 
+                required
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', outline: 'none' }}
+              />
+              <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '13px' }}>立即订阅</button>
+            </form>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px' }}>
+              <a href="https://github.com/14regret" target="_blank" rel="noreferrer" style={{ color: '#cbd5e1', fontSize: '20px' }} title="GitHub">🐙</a>
+              <a href="mailto:your-email@example.com" style={{ color: '#cbd5e1', fontSize: '20px' }} title="Email">✉️</a>
+            </div>
+          </div>
+
           <div className="glass-card">
             <h3>👋 关于我</h3>
             <div style={{ textAlign: 'center', marginTop: '10px' }}>
@@ -200,15 +224,6 @@ function Home() {
             </div>
           </div>
 
-          <div className="glass-card">
-            <h3>🏷️ 热门标签</h3>
-            <div className="tags">
-              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'Java')}>Java</span>
-              <span className="tag tag-pink" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'React')}>React</span>
-              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', '前端')}>前端</span>
-            </div>
-          </div>
-
           <div className="glass-card" style={{ alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#64ffda', textShadow: '0 0 10px rgba(100, 255, 218, 0.5)' }}>
               ONLINE
@@ -226,7 +241,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Navbar /> 
-      <MusicPlayer /> {/* 【修复】把音乐播放器挂载到全局 */}
+      <MusicPlayer />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

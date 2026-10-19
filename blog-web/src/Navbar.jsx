@@ -1,9 +1,23 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const username = localStorage.getItem('username')
+
+  // 深色/浅色模式状态
+  const [isLight, setIsLight] = useState(localStorage.getItem('theme') === 'light')
+
+  useEffect(() => {
+    if (isLight) {
+      document.body.classList.add('light-mode')
+      localStorage.setItem('theme', 'light')
+    } else {
+      document.body.classList.remove('light-mode')
+      localStorage.setItem('theme', 'dark')
+    }
+  }, [isLight])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -27,6 +41,15 @@ export default function Navbar() {
               ⚙️ 后台管理
             </Link>
           )}
+
+          {/* 主题切换按钮 */}
+          <button 
+            onClick={() => setIsLight(!isLight)}
+            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 10px' }}
+            title={isLight ? "切换暗黑模式" : "切换浅色模式"}
+          >
+            {isLight ? '🌙' : '☀️'}
+          </button>
           
           {username ? (
             <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
