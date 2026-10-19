@@ -9,7 +9,7 @@ import Navbar from './Navbar'
 import Admin from './Admin'
 import Archive from './Archive'
 import MessageBoard from './MessageBoard'
-import MusicPlayer from './MusicPlayer' // 引入音乐播放器
+import MusicPlayer from './MusicPlayer' // 【修复】引入音乐播放器
 import './App.css'
 
 const getPlainText = (markdown) => {
@@ -182,7 +182,12 @@ function Home() {
             <h3>🧭 快捷导航</h3>
             <ul className="side-menu" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <li style={{ marginBottom: '10px' }}><Link to="/" style={{ color: '#cbd5e1', textDecoration: 'none' }}>🏠 首页</Link></li>
-              <li><Link to="/archive" style={{ color: '#cbd5e1', textDecoration: 'none' }}>📅 文章归档</Link></li>
+              <li style={{ marginBottom: '10px' }}><Link to="/archive" style={{ color: '#cbd5e1', textDecoration: 'none' }}>📅 文章归档</Link></li>
+              <li>
+                <a href="http://localhost:8080/rss.xml" target="_blank" rel="noreferrer" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 'bold' }}>
+                  📡 RSS 订阅
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -221,7 +226,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Navbar /> 
-      <MusicPlayer /> {/* 在这里挂载音乐播放器 */}
+      <MusicPlayer /> {/* 【修复】把音乐播放器挂载到全局 */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
