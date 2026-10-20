@@ -21,6 +21,9 @@ export default function Admin() {
   const isAdmin = currentUsername === 'admin'
 
   useEffect(() => {
+    // 【新增】动态设置后台标题
+    document.title = '后台管理中心 - Mxj 的博客'
+
     if (!currentUsername) {
       alert("请先登录！")
       navigate('/login')
@@ -87,7 +90,6 @@ export default function Admin() {
                   <td style={{ padding: '15px', color: '#94a3b8' }}>{post.id}</td>
                   <td style={{ padding: '15px', color: '#fff', fontWeight: 'bold' }}>
                     {post.title}
-                    {/* 【核心修复】完美判断状态 */}
                     {post.isDraft && !post.scheduledTime && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>草稿</span>}
                     {post.isDraft && post.scheduledTime && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>⏰ 定时中</span>}
                   </td>

@@ -37,6 +37,11 @@ function Home() {
   const [displaySubtitle, setDisplaySubtitle] = useState('')
   const [charIndex, setCharIndex] = useState(0)
 
+  // 【新增】动态设置网页标题
+  useEffect(() => {
+    document.title = 'Mxj 的博客 - 记录生活与技术'
+  }, [])
+
   useEffect(() => {
     if (charIndex < fullSubtitle.length) {
       const timer = setTimeout(() => {
@@ -59,16 +64,15 @@ function Home() {
     if (keyword) {
       // 【搜索模式】使用 Fuse.js 进行前端高性能模糊搜索
       const fuse = new Fuse(allPosts, {
-        keys: ['title', 'content', 'tags'], // 搜索的字段
-        threshold: 0.4, // 容错率（0.4表示允许部分拼写错误）
+        keys: ['title', 'content', 'tags'], 
+        threshold: 0.4, 
         includeScore: true
       })
       const results = fuse.search(keyword).map(result => result.item)
       
-      // 【修复】使用 setTimeout 将同步 setState 变成异步，消除 ESLint 警告
       const timer = setTimeout(() => {
         setPosts(results)
-        setTotalPages(0) // 前端搜索不分页，直接全量展示
+        setTotalPages(0) 
       }, 0)
       
       return () => clearTimeout(timer)
@@ -175,7 +179,6 @@ function Home() {
               )}
             </ul>
 
-            {/* 只有在非搜索模式下，才显示分页 */}
             {!keyword && totalPages > 0 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
                 <button className="btn btn-back" disabled={page === 0} onClick={() => setPage(page - 1)}>上一页</button>
