@@ -27,8 +27,10 @@ public class Post {
     @Column(columnDefinition = "int default 0")
     private Integer likes = 0;
 
-    // 【新增】是否是草稿：true为草稿，false或null为已发布
     private Boolean isDraft = false;
+
+    // 【新增】定时发布时间
+    private LocalDateTime scheduledTime;
 
     private LocalDateTime createdAt;
 
@@ -59,6 +61,8 @@ public class Post {
     public void setLikes(Integer likes) { this.likes = likes; }
     public Boolean getIsDraft() { return isDraft; }
     public void setIsDraft(Boolean isDraft) { this.isDraft = isDraft; }
+    public LocalDateTime getScheduledTime() { return scheduledTime; }
+    public void setScheduledTime(LocalDateTime scheduledTime) { this.scheduledTime = scheduledTime; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

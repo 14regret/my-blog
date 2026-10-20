@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import request from './axiosConfig'
 
-// 【修复】把 StatCard 组件提取到最外层，避免重复创建
 const StatCard = ({ title, value, icon, color }) => (
   <div className="glass-card" style={{ flex: 1, minWidth: '200px', textAlign: 'center', padding: '25px' }}>
     <div style={{ fontSize: '30px', marginBottom: '10px' }}>{icon}</div>
@@ -27,15 +26,9 @@ export default function Admin() {
       navigate('/login')
       return
     }
-
-    request.get('/posts?page=0&size=100').then(res => setPosts(res.data.content)).catch(err => console.error(err))
+    request.get('/posts?page=0&size=100&admin=true').then(res => setPosts(res.data.content)).catch(err => console.error(err))
     request.get('/comments').then(res => setComments(res.data)).catch(err => console.error(err))
-    
-    // 拉取统计数据
-    request.get('/stats')
-      .then(res => setStats(res.data))
-      .catch(err => console.error("获取统计数据失败:", err))
-
+    request.get('/stats').then(res => setStats(res.data)).catch(err => console.error("获取统计数据失败:", err))
   }, [navigate, currentUsername])
 
   const handleDeletePost = (id) => {
@@ -65,7 +58,6 @@ export default function Admin() {
         <button className={`btn ${activeTab === 'comments' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('comments')}>💬 评论管理 ({comments.length})</button>
       </div>
 
-      {/* 数据总览面板 */}
       {activeTab === 'dashboard' && stats && (
         <div>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -74,15 +66,9 @@ export default function Admin() {
             <StatCard title="总点赞数" value={stats.totalLikes} icon="❤️" color="#ff6b9e" />
             <StatCard title="总评论数" value={stats.totalComments} icon="💬" color="#fcd34d" />
           </div>
-          
-          <div className="glass-card" style={{ textAlign: 'center', padding: '40px' }}>
-            <h3 style={{ color: '#fff', marginBottom: '20px' }}>🚀 站点运行良好</h3>
-            <p style={{ color: '#94a3b8' }}>持续创作，用文字记录生活与技术！</p>
-          </div>
         </div>
       )}
 
-      {/* 文章管理 */}
       {activeTab === 'posts' && (
         <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -101,7 +87,9 @@ export default function Admin() {
                   <td style={{ padding: '15px', color: '#94a3b8' }}>{post.id}</td>
                   <td style={{ padding: '15px', color: '#fff', fontWeight: 'bold' }}>
                     {post.title}
-                    {post.isDraft && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>草稿</span>}
+                    {/* 【核心修复】完美判断状态 */}
+                    {post.isDraft && !post.scheduledTime && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>草稿</span>}
+                    {post.isDraft && post.scheduledTime && <span style={{ marginLeft: '10px', fontSize: '12px', color: '#3b82f6', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>⏰ 定时中</span>}
                   </td>
                   <td style={{ padding: '15px', color: '#64ffda' }}>{post.author}</td>
                   <td style={{ padding: '15px', color: '#ff6b9e' }}>{post.category || '未分类'}</td>
@@ -116,7 +104,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* 评论管理 */}
       {activeTab === 'comments' && (
         <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
