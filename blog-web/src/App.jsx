@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
 import request from './axiosConfig'
 import PostDetail from './PostDetail'
@@ -11,6 +11,7 @@ import Admin from './Admin'
 import Archive from './Archive'
 import MessageBoard from './MessageBoard'
 import MusicPlayer from './MusicPlayer'
+import Profile from './Profile'
 import './App.css'
 
 const getPlainText = (markdown) => {
@@ -21,8 +22,9 @@ const getPlainText = (markdown) => {
 }
 
 function Home() {
+  const navigate = useNavigate()
   const [posts, setPosts] = useState([])
-  const [allPosts, setAllPosts] = useState([]) // 用于搜索的全量数据
+  const [allPosts, setAllPosts] = useState([])
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   
@@ -30,14 +32,15 @@ function Home() {
   const [filterValue, setFilterValue] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
+  
+  // 【新增】动态标签云状态
+  const [tagCloud, setTagCloud] = useState([])
 
   const pageSize = 5
-
   const fullSubtitle = "那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。"
   const [displaySubtitle, setDisplaySubtitle] = useState('')
   const [charIndex, setCharIndex] = useState(0)
 
-  // 【新增】动态设置网页标题
   useEffect(() => {
     document.title = 'Mxj 的博客 - 记录生活与技术'
   }, [])
@@ -52,36 +55,44 @@ function Home() {
     }
   }, [charIndex, fullSubtitle])
 
-  // 1. 初始化时拉取全量数据用于前端搜索
+  // 初始化拉取全量数据用于搜索和标签云统计
   useEffect(() => {
     request.get('/posts?page=0&size=999').then(res => {
-      setAllPosts(res.data.content)
+      const fetchedPosts = res.data.content
+      setAllPosts(fetchedPosts)
+
+      // 【新增】统计标签频次
+      const tagCounts = {}
+      fetchedPosts.forEach(p => {
+        if (p.tags) {
+          p.tags.split(',').forEach(t => {
+            const tag = t.trim()
+            if (tag) tagCounts[tag] = (tagCounts[tag] || 0) + 1
+          })
+        }
+      })
+      // 转成数组并排序
+      const sortedTags = Object.keys(tagCounts)
+        .map(name => ({ name, count: tagCounts[name] }))
+        .sort((a, b) => b.count - a.count)
+      setTagCloud(sortedTags)
+
     }).catch(err => console.error(err))
   }, [])
 
-  // 2. 页面展示逻辑
   useEffect(() => {
     if (keyword) {
-      // 【搜索模式】使用 Fuse.js 进行前端高性能模糊搜索
-      const fuse = new Fuse(allPosts, {
-        keys: ['title', 'content', 'tags'], 
-        threshold: 0.4, 
-        includeScore: true
-      })
+      const fuse = new Fuse(allPosts, { keys: ['title', 'content', 'tags'], threshold: 0.4, includeScore: true })
       const results = fuse.search(keyword).map(result => result.item)
-      
       const timer = setTimeout(() => {
         setPosts(results)
         setTotalPages(0) 
       }, 0)
-      
       return () => clearTimeout(timer)
     } else {
-      // 【常规浏览模式】走后端分页和分类标签筛选
       let url = `/posts?page=${page}&size=${pageSize}`
       if (filterType === 'category') url += `&category=${filterValue}`
       if (filterType === 'tag') url += `&tag=${filterValue}`
-
       request.get(url).then(res => {
         setPosts(res.data.content)
         setTotalPages(res.data.totalPages)
@@ -113,6 +124,18 @@ function Home() {
     setPage(0)
   }
 
+  // 【新增】随机漫游
+  const handleRandomPost = () => {
+    request.get('/posts/random').then(res => {
+      if (res.data && res.data.id) {
+        navigate(`/post/${res.data.id}`)
+      }
+    }).catch(err => {
+      console.error(err)
+      alert("还没有已发布的文章哦！")
+    })
+  }
+
   const titleText = "欢迎来到 Mxj 的博客";
 
   return (
@@ -138,7 +161,6 @@ function Home() {
               <h3 style={{ border: 'none', margin: 0, padding: 0, flexShrink: 0 }}>
                 📚 {keyword ? `Fuse搜索: "${keyword}"` : filterType ? '筛选结果' : '最新文章列表'}
               </h3>
-              
               <form onSubmit={handleSearch} style={{ display: 'flex', gap: '5px' }}>
                 <input 
                   type="text" 
@@ -153,9 +175,7 @@ function Home() {
 
             {(keyword || filterType) && (
               <div style={{ fontSize: '14px', marginBottom: '15px', color: '#cbd5e1', background: 'rgba(255,255,255,0.05)', padding: '8px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>
-                  当前条件：<span style={{ color: '#64ffda' }}>{keyword ? `搜索 "${keyword}"` : filterValue}</span>
-                </span>
+                <span>当前条件：<span style={{ color: '#64ffda' }}>{keyword ? `搜索 "${keyword}"` : filterValue}</span></span>
                 <button onClick={clearAllConditions} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', textDecoration: 'underline' }}>清空条件</button>
               </div>
             )}
@@ -191,8 +211,7 @@ function Home() {
           <div className="glass-card">
             <h3>📢 站点公告</h3>
             <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6' }}>
-              欢迎来到我的小站！<br />
-              你可以随意阅读文章，登录后还可以发布评论。
+              欢迎来到我的小站！<br />你可以随意阅读文章，登录后还可以发布评论。
             </p>
           </div>
         </div>
@@ -202,9 +221,7 @@ function Home() {
             <h3>👋 关于我</h3>
             <div style={{ textAlign: 'center', marginTop: '10px' }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(45deg, #ff6b9e, #64ffda)', margin: '0 auto 15px auto' }}></div>
-              <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6' }}>
-                一个普普通通的牛马的全栈开发者，目前正在努力变强中！
-              </p>
+              <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6' }}>一个普普通通的牛马的全栈开发者，目前正在努力变强中！</p>
             </div>
           </div>
 
@@ -213,11 +230,13 @@ function Home() {
             <ul className="side-menu" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <li style={{ marginBottom: '10px' }}><Link to="/" style={{ color: '#cbd5e1', textDecoration: 'none' }}>🏠 首页</Link></li>
               <li style={{ marginBottom: '10px' }}><Link to="/archive" style={{ color: '#cbd5e1', textDecoration: 'none' }}>📅 文章归档</Link></li>
-              <li>
-                <a href="http://localhost:8080/rss.xml" target="_blank" rel="noreferrer" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 'bold' }}>
-                  📡 RSS 订阅
-                </a>
+              <li style={{ marginBottom: '10px' }}>
+                {/* 【新增】随机漫游按钮 */}
+                <button onClick={handleRandomPost} style={{ background: 'none', border: 'none', color: '#64ffda', cursor: 'pointer', padding: 0, fontSize: '14px', display: 'flex', alignItems: 'center' }}>
+                  🎲 随机漫游
+                </button>
               </li>
+              <li><a href="http://localhost:8080/rss.xml" target="_blank" rel="noreferrer" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 'bold' }}>📡 RSS 订阅</a></li>
             </ul>
           </div>
 
@@ -230,23 +249,44 @@ function Home() {
             </div>
           </div>
 
+          {/* 【新增】动态标签云 */}
           <div className="glass-card">
-            <h3>🏷️ 热门标签</h3>
-            <div className="tags">
-              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'Java')}>Java</span>
-              <span className="tag tag-pink" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', 'React')}>React</span>
-              <span className="tag" style={{ cursor: 'pointer' }} onClick={() => handleFilter('tag', '前端')}>前端</span>
+            <h3>🏷️ 动态标签云</h3>
+            <div className="tags" style={{ alignItems: 'center' }}>
+              {tagCloud.length === 0 ? (
+                <span style={{ color: '#64748b', fontSize: '13px' }}>暂无标签</span>
+              ) : (
+                tagCloud.map((tag, ) => {
+                  // 根据热度动态计算字体大小和颜色
+                  const isHot = tag.count > 1;
+                  const fontSize = Math.min(12 + tag.count * 2, 18); // 基础12px，最多18px
+                  
+                  return (
+                    <span 
+                      key={tag.name} 
+                      className={isHot ? "tag tag-pink" : "tag"}
+                      style={{ 
+                        cursor: 'pointer', 
+                        fontSize: `${fontSize}px`,
+                        fontWeight: isHot ? 'bold' : 'normal',
+                        padding: isHot ? '6px 14px' : '4px 10px'
+                      }} 
+                      onClick={() => handleFilter('tag', tag.name)}
+                      title={`包含 ${tag.count} 篇文章`}
+                    >
+                      {tag.name}
+                    </span>
+                  )
+                })
+              )}
             </div>
           </div>
 
           <div className="glass-card" style={{ alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#64ffda', textShadow: '0 0 10px rgba(100, 255, 218, 0.5)' }}>
-              ONLINE
-            </div>
+            <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#64ffda', textShadow: '0 0 10px rgba(100, 255, 218, 0.5)' }}>ONLINE</div>
             <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '10px' }}>系统运行良好</p>
           </div>
         </div>
-
       </div>
     </>
   )
@@ -267,6 +307,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/archive" element={<Archive />} />
         <Route path="/message" element={<MessageBoard />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   )

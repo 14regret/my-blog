@@ -12,15 +12,18 @@ public class Comment {
     private Long id;
 
     @Column(nullable = false)
-    private Long postId; // 关联的文章 ID
+    private Long postId;
 
     @Column(nullable = false)
-    private String author; // 游客昵称
+    private String author;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String content; // 评论内容
+    private String content;
 
     private LocalDateTime createdAt;
+
+    // 【新增】父评论 ID。如果为 null，说明是顶级评论；否则是回复某条评论
+    private Long parentId;
 
     @PrePersist
     protected void onCreate() {
@@ -38,4 +41,6 @@ public class Comment {
     public void setContent(String content) { this.content = content; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
 }

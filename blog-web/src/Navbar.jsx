@@ -1,23 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
 
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const username = localStorage.getItem('username')
-
-  // 深色/浅色模式状态
-  const [isLight, setIsLight] = useState(localStorage.getItem('theme') === 'light')
-
-  useEffect(() => {
-    if (isLight) {
-      document.body.classList.add('light-mode')
-      localStorage.setItem('theme', 'light')
-    } else {
-      document.body.classList.remove('light-mode')
-      localStorage.setItem('theme', 'dark')
-    }
-  }, [isLight])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -30,7 +16,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="navbar-logo">✍️ Mxj 的博客</Link>
-        <div className="navbar-links">
+        <div className="navbar-links" style={{ alignItems: 'center', display: 'flex' }}>
           <Link to="/" className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>首页</Link>
           <Link to="/archive" className={`nav-item ${location.pathname === '/archive' ? 'active' : ''}`}>归档</Link>
           <Link to="/message" className={`nav-item ${location.pathname === '/message' ? 'active' : ''}`}>留言板</Link>
@@ -41,26 +27,22 @@ export default function Navbar() {
               ⚙️ 后台管理
             </Link>
           )}
-
-          {/* 主题切换按钮 */}
-          <button 
-            onClick={() => setIsLight(!isLight)}
-            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 10px' }}
-            title={isLight ? "切换暗黑模式" : "切换浅色模式"}
-          >
-            {isLight ? '🌙' : '☀️'}
-          </button>
           
           {username ? (
-            <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
-              <span style={{ marginRight: '12px', color: '#64ffda', fontSize: '14px', fontWeight: 'bold' }}>
+            <div style={{ marginLeft: '20px', display: 'flex', alignItems: 'center' }}>
+              {/* 【新增】把用户名变成进入个人中心的链接 */}
+              <Link 
+                to="/profile" 
+                className={`nav-item ${location.pathname === '/profile' ? 'active' : ''}`}
+                style={{ marginRight: '12px', color: '#64ffda', fontSize: '14px', fontWeight: 'bold', textDecoration: 'none' }}
+              >
                 👤 {username}
-              </span>
+              </Link>
               <button onClick={handleLogout} className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '13px' }}>退出</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Link to="/login" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px' }}>登录</Link>
+            <div style={{ marginLeft: '20px' }}>
+              <Link to="/login" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px', marginRight: '10px' }}>登录</Link>
               <Link to="/register" className="btn btn-warning" style={{ padding: '6px 12px', fontSize: '13px' }}>注册</Link>
             </div>
           )}
