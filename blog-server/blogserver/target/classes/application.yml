@@ -3,30 +3,30 @@ server:
 
 spring:
   datasource:
-    url: jdbc:h2:file:./data/blogdb;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    # 连接我们刚刚建好的 blog_db 数据库
+    url: jdbc:mysql://localhost:3306/blog_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    # 【注意】这里填你真实的 MySQL 密码
+    password: qwer0987
+
   jpa:
     hibernate:
+      # update: 如果没有表，会自动帮你建表
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+        dialect: org.hibernate.dialect.MySQLDialect 
+        
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 5MB
 
 jwt:
-  # 必须是 32 个字符以上的长字符串
   secret: MxjSuperSecretKeyForBlogJwtAuthenticationMustBeLongEnough2026
 
 cors:
-  # 支持多个域名，用逗号隔开
   allowed-origins: "http://localhost:5173,http://127.0.0.1:5173"
