@@ -1,32 +1,61 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import request from './axiosConfig'
 
 export default function Profile() {
-  const [favorites, setFavorites] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState({ avatar: '', bio: '' })
+  const [isEditing, setIsEditing] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  
   const navigate = useNavigate()
   const username = localStorage.getItem('username')
 
+  // 【修复】使用 useCallback 包裹，并移到 useEffect 上方
+  const fetchProfile = useCallback(() => {
+    if (!username) return
+    request.get(`/users/${username}/profile`)
+      .then(res => setProfile(res.data))
+      .catch(err => console.error(err))
+  }, [username])
+
   useEffect(() => {
     document.title = '个人中心 - Mxj 的博客'
-    
     if (!username) {
       alert("请先登录！")
       navigate('/login')
       return
     }
+    fetchProfile()
+  }, [navigate, username, fetchProfile]) // 将 fetchProfile 加入依赖数组
 
-    // 拉取收藏列表
-    request.get('/favorites')
-      .then(res => {
-        setFavorites(res.data)
-        setLoading(false)
-      }).catch(err => {
-        console.error("获取收藏失败:", err)
-        setLoading(false)
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('file', file)
+    setUploading(true)
+    request.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => {
+      setUploading(false)
+      if (res.data.url) setProfile({ ...profile, avatar: res.data.url })
+    }).catch(err => { 
+      setUploading(false); 
+      console.error(err);
+      alert("上传失败") 
+    })
+  }
+
+  const handleSave = () => {
+    request.post('/users/profile', { avatar: profile.avatar, bio: profile.bio })
+      .then(() => { 
+        setIsEditing(false); 
+        alert("资料已更新！"); 
+        window.location.reload() 
       })
-  }, [navigate, username])
+      .catch(err => { 
+        console.error(err); 
+        alert("保存失败") 
+      })
+  }
 
   if (!username) return null
 
@@ -37,39 +66,50 @@ export default function Profile() {
         <Link to="/" className="btn btn-back">← 返回首页</Link>
       </div>
 
-      <div className="glass-card" style={{ background: 'rgba(100, 255, 218, 0.05)', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(45deg, #ff6b9e, #64ffda)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '30px', color: '#fff', fontWeight: 'bold' }}>
-          {username.charAt(0).toUpperCase()}
+      <div className="glass-card" style={{ background: 'rgba(100, 255, 218, 0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', position: 'relative' }}>
+        
+        {/* 头像展示/上传 */}
+        <div style={{ position: 'relative', marginBottom: '20px' }}>
+          {profile.avatar ? (
+            <img src={profile.avatar} alt="avatar" style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #64ffda', boxShadow: '0 0 20px rgba(100,255,218,0.4)' }} />
+          ) : (
+            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(45deg, #ff6b9e, #64ffda)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px', color: '#fff', fontWeight: 'bold' }}>
+              {username.charAt(0).toUpperCase()}
+            </div>
+          )}
+          {isEditing && (
+            <div style={{ position: 'absolute', bottom: 0, right: 0 }}>
+              <input type="file" accept="image/*" id="avatar-upload" style={{ display: 'none' }} onChange={handleImageUpload} />
+              <label htmlFor="avatar-upload" className="btn btn-primary" style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: '50%' }}>
+                {uploading ? '...' : '📷'}
+              </label>
+            </div>
+          )}
         </div>
-        <div>
-          <h2 style={{ margin: '0 0 5px 0', color: '#fff' }}>你好, {username}!</h2>
-          <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>欢迎回到你的专属空间，这里存放着你喜欢的内容。</p>
-        </div>
-      </div>
 
-      <h3 style={{ color: '#64ffda', borderBottom: '1px solid rgba(100,255,218,0.2)', paddingBottom: '10px' }}>⭐ 我的收藏夹</h3>
-      
-      {loading ? (
-        <p style={{ color: '#94a3b8' }}>加载中...</p>
-      ) : favorites.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-          <p>你的收藏夹空空如也~</p>
-          <Link to="/" className="btn btn-primary" style={{ marginTop: '15px' }}>去逛逛</Link>
-        </div>
-      ) : (
-        <ul className="article-list" style={{ marginTop: '20px' }}>
-          {favorites.map(fav => (
-            <li key={fav.id} style={{ padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to={`/post/${fav.postId}`} style={{ fontSize: '18px', color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold' }}>
-                  📄 文章 ID: {fav.postId}
-                </Link>
-                <span style={{ color: '#64748b', fontSize: '13px' }}>收藏于: {new Date(fav.createdAt).toLocaleDateString()}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+        <h2 style={{ color: '#fff', margin: '0 0 10px 0' }}>{username}</h2>
+        
+        {/* 简介展示/编辑 */}
+        {isEditing ? (
+          <textarea 
+            value={profile.bio || ''} 
+            onChange={e => setProfile({ ...profile, bio: e.target.value })} 
+            placeholder="介绍一下你自己吧..." 
+            style={{ width: '80%', maxWidth: '400px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '10px', marginBottom: '20px', outline: 'none' }} 
+          />
+        ) : (
+          <p style={{ color: '#94a3b8', textAlign: 'center', maxWidth: '500px' }}>{profile.bio || '这个人很懒，什么都没留下~'}</p>
+        )}
+
+        {isEditing ? (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={handleSave} className="btn btn-primary">保存资料</button>
+            <button onClick={() => { setIsEditing(false); fetchProfile(); }} className="btn btn-back">取消</button>
+          </div>
+        ) : (
+          <button onClick={() => setIsEditing(true)} className="btn btn-back">✏️ 编辑资料</button>
+        )}
+      </div>
     </div>
   )
 }

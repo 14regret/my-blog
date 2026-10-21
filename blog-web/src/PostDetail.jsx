@@ -3,6 +3,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import request from './axiosConfig'
 import ReactMarkdown from 'react-markdown'
 
+// 常用表情库
+const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😎','🤔','😭','😡','🥳','🤯','😴','👻','💩','👍','👎','👏','🙏','❤️','💔','⭐','🔥','🎉','💯','✨','🎈','🌹','🍺','🍉']
+
 export default function PostDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -14,7 +17,7 @@ export default function PostDetail() {
   const [replyTo, setReplyTo] = useState(null) 
   
   const [hasLiked, setHasLiked] = useState(false)
-  const [isFavorited, setIsFavorited] = useState(false) // 【新增】收藏状态
+  const [isFavorited, setIsFavorited] = useState(false)
   const [toc, setToc] = useState([])
   const [activeId, setActiveId] = useState('')
   const contentRef = useRef(null)
@@ -24,6 +27,9 @@ export default function PostDetail() {
   const [readProgress, setReadProgress] = useState(0)
   const [isImmersive, setIsImmersive] = useState(false)
   const [fontSize, setFontSize] = useState(() => Number(localStorage.getItem('articleFontSize')) || 17)
+
+  // 【新增】表情面板显示状态
+  const [showEmoji, setShowEmoji] = useState(false)
 
   const currentUsername = localStorage.getItem('username')
   const isAdmin = currentUsername === 'admin'
@@ -40,17 +46,12 @@ export default function PostDetail() {
     request.get(`/posts/${id}/comments`).then(res => setComments(res.data)).catch(err => console.error(err))
     request.get(`/posts/${id}/related`).then(res => setRelatedPosts(res.data)).catch(err => console.error(err))
 
-    // 【新增】如果登录了，检查是否已收藏
     if (currentUsername) {
-      request.get(`/favorites/${id}/check`)
-        .then(res => setIsFavorited(res.data))
-        .catch(err => console.error(err))
+      request.get(`/favorites/${id}/check`).then(res => setIsFavorited(res.data)).catch(err => console.error(err))
     }
 
     return () => clearTimeout(timer)
   }, [id, currentUsername])
-
-  // ... 省略目录监听等代码，和上一版完全一样 ...
 
   useEffect(() => {
     return () => { document.title = 'Mxj 的博客 - 记录生活与技术' }
@@ -99,12 +100,16 @@ export default function PostDetail() {
     localStorage.setItem('articleFontSize', newSize)
   }
 
-  // 【新增】收藏操作
+  // 【新增】插入表情
+  const addEmoji = (emoji) => {
+    setCommentContent(prev => prev + emoji)
+    setShowEmoji(false)
+    document.getElementById('comment-input')?.focus()
+  }
+
   const handleFavorite = () => {
     if (!currentUsername) return alert("请先登录后再收藏！")
-    request.post(`/favorites/${id}`).then(res => {
-      setIsFavorited(res.data)
-    }).catch(err => { console.error(err); alert("操作失败"); })
+    request.post(`/favorites/${id}`).then(res => setIsFavorited(res.data)).catch(err => console.error(err))
   }
 
   const handleDelete = () => {
@@ -195,19 +200,18 @@ export default function PostDetail() {
             <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '20px 0' }} />
 
             <div className="post-content" id="post-content" ref={contentRef} style={{ fontSize: `${fontSize}px` }}>
-              <ReactMarkdown components={{ img: (props) => <img {...props} style={{ cursor: 'zoom-in', maxWidth: '100%', borderRadius: '8px' }} onClick={() => setLightboxSrc(props.src)} alt={props.alt || '图片'} /> }}>
+              <ReactMarkdown
+                components={{
+                  img: (props) => <img {...props} style={{ cursor: 'zoom-in', maxWidth: '100%', borderRadius: '8px' }} onClick={() => setLightboxSrc(props.src)} alt={props.alt || '图片'} />
+                }}
+              >
                 {post.content}
               </ReactMarkdown>
             </div>
 
-            {/* 操作区：收藏与点赞 */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '50px', margin: '50px 0' }}>
-              
-              {/* 【新增】收藏按钮 */}
               <button onClick={handleFavorite} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ fontSize: '40px', filter: isFavorited ? 'drop-shadow(0 0 10px #fcd34d)' : 'grayscale(100%)', transition: 'transform 0.2s', transform: isFavorited ? 'scale(1.1)' : 'scale(1)' }}>
-                  {isFavorited ? '⭐' : '☆'}
-                </div>
+                <div style={{ fontSize: '40px', filter: isFavorited ? 'drop-shadow(0 0 10px #fcd34d)' : 'grayscale(100%)', transition: 'transform 0.2s', transform: isFavorited ? 'scale(1.1)' : 'scale(1)' }}>{isFavorited ? '⭐' : '☆'}</div>
                 <span style={{ color: isFavorited ? '#fcd34d' : '#94a3b8', fontSize: '14px', marginTop: '5px' }}>{isFavorited ? '已收藏' : '收藏文章'}</span>
               </button>
 
@@ -217,7 +221,6 @@ export default function PostDetail() {
               </button>
             </div>
 
-            {/* 相关推荐等其余代码保持不变... */}
             {relatedPosts.length > 0 && !isImmersive && (
               <div className="glass-card" style={{ margin: '30px 0', background: 'rgba(0,0,0,0.2)' }}>
                 <h3 style={{ color: '#64ffda', marginTop: 0 }}>📖 相关推荐</h3>
@@ -245,7 +248,21 @@ export default function PostDetail() {
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                   <input type="text" placeholder="你的昵称" value={commentAuthor} onChange={e => setCommentAuthor(e.target.value)} style={{ width: '200px', padding: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', outline: 'none' }} />
                 </div>
-                <textarea id="comment-input" placeholder="说点什么吧..." value={commentContent} onChange={e => setCommentContent(e.target.value)} rows="3" style={{ width: '100%', padding: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', boxSizing: 'border-box', marginBottom: '10px', outline: 'none', resize: 'vertical' }}></textarea>
+                <div style={{ position: 'relative' }}>
+                  <textarea id="comment-input" placeholder="说点什么吧..." value={commentContent} onChange={e => setCommentContent(e.target.value)} rows="3" style={{ width: '100%', padding: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', borderRadius: '6px', boxSizing: 'border-box', marginBottom: '10px', outline: 'none', resize: 'vertical' }}></textarea>
+                  
+                  {/* 【新增】表情按钮与面板 */}
+                  <div style={{ position: 'absolute', bottom: '20px', right: '10px' }}>
+                    <button type="button" onClick={() => setShowEmoji(!showEmoji)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', outline: 'none' }}>😀</button>
+                    {showEmoji && (
+                      <div className="emoji-picker">
+                        {EMOJIS.map(e => (
+                          <span key={e} onClick={() => addEmoji(e)} className="emoji-item">{e}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>发表评论</button>
               </form>
 

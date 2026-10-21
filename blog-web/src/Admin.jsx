@@ -15,23 +15,25 @@ export default function Admin() {
   const [posts, setPosts] = useState([])
   const [comments, setComments] = useState([])
   const [stats, setStats] = useState(null)
-  const navigate = useNavigate()
+  const [announcement, setAnnouncement] = useState('')
   
+  // 友链状态
+  const [links, setLinks] = useState([])
+  const [newLink, setNewLink] = useState({ name: '', url: '', avatar: '', description: '' })
+
+  const navigate = useNavigate()
   const currentUsername = localStorage.getItem('username')
   const isAdmin = currentUsername === 'admin'
 
   useEffect(() => {
-    // 【新增】动态设置后台标题
     document.title = '后台管理中心 - Mxj 的博客'
-
-    if (!currentUsername) {
-      alert("请先登录！")
-      navigate('/login')
-      return
-    }
+    if (!currentUsername) { alert("请先登录！"); navigate('/login'); return }
+    
     request.get('/posts?page=0&size=100&admin=true').then(res => setPosts(res.data.content)).catch(err => console.error(err))
     request.get('/comments').then(res => setComments(res.data)).catch(err => console.error(err))
     request.get('/stats').then(res => setStats(res.data)).catch(err => console.error("获取统计数据失败:", err))
+    request.get('/config/announcement').then(res => setAnnouncement(res.data.announcement || '')).catch(err => console.error(err))
+    request.get('/friend-links').then(res => setLinks(res.data)).catch(err => console.error(err))
   }, [navigate, currentUsername])
 
   const handleDeletePost = (id) => {
@@ -43,6 +45,27 @@ export default function Admin() {
   const handleDeleteComment = (id) => {
     if (window.confirm("确定要删除这条评论吗？")) {
       request.delete(`/comments/${id}`).then(() => setComments(comments.filter(c => c.id !== id))).catch(err => console.error(err))
+    }
+  }
+
+  const handleAddLink = () => {
+    if (!newLink.name || !newLink.url) return alert("名称和链接不能为空")
+    request.post('/friend-links', newLink).then(res => {
+      setLinks([...links, res.data])
+      setNewLink({ name: '', url: '', avatar: '', description: '' })
+      alert("添加成功")
+    }).catch(err => {
+      console.error(err) // 【修复】使用 err，消除警告
+      alert("添加失败")
+    })
+  }
+
+  const handleDeleteLink = (id) => {
+    if (window.confirm("确定删除此友链吗？")) {
+      request.delete(`/friend-links/${id}`).then(() => setLinks(links.filter(l => l.id !== id))).catch(err => {
+        console.error(err) // 【修复】使用 err，消除警告
+        alert("删除失败")
+      })
     }
   }
 
@@ -59,6 +82,7 @@ export default function Admin() {
         <button className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('dashboard')}>📊 数据总览</button>
         <button className={`btn ${activeTab === 'posts' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('posts')}>📝 文章管理 ({displayPosts.length})</button>
         <button className={`btn ${activeTab === 'comments' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('comments')}>💬 评论管理 ({comments.length})</button>
+        <button className={`btn ${activeTab === 'links' ? 'btn-primary' : 'btn-back'}`} onClick={() => setActiveTab('links')}>🔗 友链管理</button>
       </div>
 
       {activeTab === 'dashboard' && stats && (
@@ -68,6 +92,55 @@ export default function Admin() {
             <StatCard title="总浏览量" value={stats.totalViews} icon="👁️" color="#60a5fa" />
             <StatCard title="总点赞数" value={stats.totalLikes} icon="❤️" color="#ff6b9e" />
             <StatCard title="总评论数" value={stats.totalComments} icon="💬" color="#fcd34d" />
+          </div>
+          <div className="glass-card" style={{ marginTop: '20px', background: 'rgba(0,0,0,0.3)' }}>
+            <h3 style={{ color: '#ffd700', marginTop: 0 }}>📢 站点公告设置</h3>
+            <p style={{ color: '#94a3b8', fontSize: '13px' }}>留空则隐藏公告横幅。游客点击关闭后，只要内容不变就不会再次弹出。</p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="输入想要发布的公告内容..." style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }} />
+              <button onClick={() => request.post('/config/announcement', { announcement }).then(() => alert("公告已更新！")).catch((err) => { console.error(err); alert("修改失败"); })} className="btn btn-primary">发布公告</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 友链管理面板 */}
+      {activeTab === 'links' && (
+        <div>
+          <div className="glass-card" style={{ marginBottom: '20px', background: 'rgba(0,0,0,0.3)' }}>
+            <h3 style={{ color: '#64ffda', marginTop: 0 }}>➕ 添加新友链</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <input type="text" placeholder="网站名称 (必填)" value={newLink.name} onChange={e => setNewLink({...newLink, name: e.target.value})} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <input type="text" placeholder="网站链接 (必填, http开头)" value={newLink.url} onChange={e => setNewLink({...newLink, url: e.target.value})} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <input type="text" placeholder="头像链接 (选填)" value={newLink.avatar} onChange={e => setNewLink({...newLink, avatar: e.target.value})} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <input type="text" placeholder="一句话简介 (选填)" value={newLink.description} onChange={e => setNewLink({...newLink, description: e.target.value})} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+            </div>
+            <button onClick={handleAddLink} className="btn btn-primary" style={{ marginTop: '15px', width: '100%' }}>保存友链</button>
+          </div>
+
+          <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <tr>
+                  <th style={{ padding: '15px' }}>名称</th>
+                  <th style={{ padding: '15px' }}>链接</th>
+                  <th style={{ padding: '15px' }}>状态</th>
+                  <th style={{ padding: '15px', textAlign: 'right' }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {links.map(link => (
+                  <tr key={link.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '15px', color: '#fff' }}>{link.name}</td>
+                    <td style={{ padding: '15px', color: '#60a5fa' }}><a href={link.url} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>{link.url}</a></td>
+                    <td style={{ padding: '15px' }}>{link.isOnline ? '🟢 在线' : '🔴 离线'}</td>
+                    <td style={{ padding: '15px', textAlign: 'right' }}>
+                      <button onClick={() => handleDeleteLink(link.id)} className="btn btn-danger" style={{ padding: '4px 10px' }}>删除</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -146,3 +146,34 @@ body::before {
 .danmaku-input { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; padding: 10px 15px; border-radius: 8px; outline: none; font-size: 15px; transition: all 0.3s; }
 .danmaku-input::placeholder { color: rgba(255, 215, 0, 0.4); }
 .danmaku-input:focus { border-color: #ffd700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+
+/* ====== 表情选择器样式 ====== */
+.emoji-picker {
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  width: 280px;
+  background: rgba(30, 30, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(100, 255, 218, 0.3);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.emoji-item {
+  font-size: 22px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  transition: transform 0.1s, background 0.2s;
+}
+
+.emoji-item:hover {
+  transform: scale(1.2);
+  background: rgba(255, 255, 255, 0.1);
+}

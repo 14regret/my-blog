@@ -12,7 +12,9 @@ import Archive from './Archive'
 import MessageBoard from './MessageBoard'
 import MusicPlayer from './MusicPlayer'
 import Profile from './Profile'
+import FriendLinks from './FriendLinks'
 import './App.css'
+import Notifications from './Notifications'
 
 const getPlainText = (markdown) => {
   if (!markdown) return ''
@@ -33,7 +35,6 @@ function Home() {
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
   
-  // 【新增】动态标签云状态
   const [tagCloud, setTagCloud] = useState([])
 
   const pageSize = 5
@@ -55,13 +56,11 @@ function Home() {
     }
   }, [charIndex, fullSubtitle])
 
-  // 初始化拉取全量数据用于搜索和标签云统计
   useEffect(() => {
     request.get('/posts?page=0&size=999').then(res => {
       const fetchedPosts = res.data.content
       setAllPosts(fetchedPosts)
 
-      // 【新增】统计标签频次
       const tagCounts = {}
       fetchedPosts.forEach(p => {
         if (p.tags) {
@@ -71,12 +70,10 @@ function Home() {
           })
         }
       })
-      // 转成数组并排序
       const sortedTags = Object.keys(tagCounts)
         .map(name => ({ name, count: tagCounts[name] }))
         .sort((a, b) => b.count - a.count)
       setTagCloud(sortedTags)
-
     }).catch(err => console.error(err))
   }, [])
 
@@ -93,6 +90,7 @@ function Home() {
       let url = `/posts?page=${page}&size=${pageSize}`
       if (filterType === 'category') url += `&category=${filterValue}`
       if (filterType === 'tag') url += `&tag=${filterValue}`
+      
       request.get(url).then(res => {
         setPosts(res.data.content)
         setTotalPages(res.data.totalPages)
@@ -124,19 +122,20 @@ function Home() {
     setPage(0)
   }
 
-  // 【新增】随机漫游
   const handleRandomPost = () => {
-    request.get('/posts/random').then(res => {
-      if (res.data && res.data.id) {
-        navigate(`/post/${res.data.id}`)
-      }
-    }).catch(err => {
-      console.error(err)
-      alert("还没有已发布的文章哦！")
-    })
+    request.get('/posts/random')
+      .then(res => {
+        if (res.data && res.data.id) {
+          navigate(`/post/${res.data.id}`)
+        }
+      })
+      .catch(err => {
+        console.error(err)
+        alert("还没有已发布的文章哦！")
+      })
   }
 
-  const titleText = "欢迎来到 Mxj 的博客";
+  const titleText = "欢迎来到 Mxj 的博客"
 
   return (
     <>
@@ -230,11 +229,9 @@ function Home() {
             <ul className="side-menu" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <li style={{ marginBottom: '10px' }}><Link to="/" style={{ color: '#cbd5e1', textDecoration: 'none' }}>🏠 首页</Link></li>
               <li style={{ marginBottom: '10px' }}><Link to="/archive" style={{ color: '#cbd5e1', textDecoration: 'none' }}>📅 文章归档</Link></li>
+              <li style={{ marginBottom: '10px' }}><Link to="/links" style={{ color: '#cbd5e1', textDecoration: 'none' }}>🔗 友情链接</Link></li>
               <li style={{ marginBottom: '10px' }}>
-                {/* 【新增】随机漫游按钮 */}
-                <button onClick={handleRandomPost} style={{ background: 'none', border: 'none', color: '#64ffda', cursor: 'pointer', padding: 0, fontSize: '14px', display: 'flex', alignItems: 'center' }}>
-                  🎲 随机漫游
-                </button>
+                <button onClick={handleRandomPost} style={{ background: 'none', border: 'none', color: '#64ffda', cursor: 'pointer', padding: 0, fontSize: '14px', display: 'flex', alignItems: 'center' }}>🎲 随机漫游</button>
               </li>
               <li><a href="http://localhost:8080/rss.xml" target="_blank" rel="noreferrer" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 'bold' }}>📡 RSS 订阅</a></li>
             </ul>
@@ -249,29 +246,21 @@ function Home() {
             </div>
           </div>
 
-          {/* 【新增】动态标签云 */}
           <div className="glass-card">
             <h3>🏷️ 动态标签云</h3>
             <div className="tags" style={{ alignItems: 'center' }}>
               {tagCloud.length === 0 ? (
                 <span style={{ color: '#64748b', fontSize: '13px' }}>暂无标签</span>
               ) : (
-                tagCloud.map((tag, ) => {
-                  // 根据热度动态计算字体大小和颜色
-                  const isHot = tag.count > 1;
-                  const fontSize = Math.min(12 + tag.count * 2, 18); // 基础12px，最多18px
-                  
+                tagCloud.map(tag => {
+                  const isHot = tag.count > 1
+                  const fontSize = Math.min(12 + tag.count * 2, 18)
                   return (
                     <span 
                       key={tag.name} 
                       className={isHot ? "tag tag-pink" : "tag"}
-                      style={{ 
-                        cursor: 'pointer', 
-                        fontSize: `${fontSize}px`,
-                        fontWeight: isHot ? 'bold' : 'normal',
-                        padding: isHot ? '6px 14px' : '4px 10px'
-                      }} 
-                      onClick={() => handleFilter('tag', tag.name)}
+                      style={{ cursor: 'pointer', fontSize: `${fontSize}px`, fontWeight: isHot ? 'bold' : 'normal', padding: isHot ? '6px 14px' : '4px 10px' }} 
+                      onClick={() => handleFilter('tag', tag.name)} 
                       title={`包含 ${tag.count} 篇文章`}
                     >
                       {tag.name}
@@ -308,6 +297,8 @@ export default function App() {
         <Route path="/archive" element={<Archive />} />
         <Route path="/message" element={<MessageBoard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/links" element={<FriendLinks />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Routes>
     </BrowserRouter>
   )
