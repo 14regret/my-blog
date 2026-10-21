@@ -138,14 +138,21 @@ export default function PostDetail() {
     document.getElementById('comment-input')?.focus()
   }
 
-  const handleDeleteComment = (commentId) => {
+    const handleDeleteComment = (commentId) => {
     if (window.confirm("确定要删除这条评论及它的所有回复吗？")) {
       request.delete(`/comments/${commentId}`).then(() => {
         setComments(comments.filter(c => c.id !== commentId && c.parentId !== commentId))
-      }).catch(err => console.error(err))
+      }).catch(err => {
+        console.error(err)
+        // 捕获后端越权抛出的异常
+        if (err.response && err.response.data && err.response.data.message) {
+           alert(err.response.data.message)
+        } else {
+           alert("删除失败！")
+        }
+      })
     }
   }
-
   const handleLike = () => {
     if (hasLiked) return alert("你已经点过赞啦！")
     request.put(`/posts/${id}/like`).then(res => {

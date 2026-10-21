@@ -17,13 +17,23 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 1. 放开 OPTIONS 预检请求
-        if ("OPTIONS".equals(request.getMethod())) {
-            return true;
+        // 【安全头修复】防止点击劫持和 MIME 嗅探
+        response.setHeader("X-Frame-Options", "SAMEORIGIN");
+        response.setHeader("X-Content-Type-Options", "nosniff");
+
+        // 【防盗链修复】针对 /uploads/ 下的图片进行 Referer 校验
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/uploads/")) {
+            String referer = request.getHeader("Referer");
+            // 如果是从其他网站直接引用图片（Referer不为空且不包含你的域名）
+            if (referer != null && !referer.contains(request.getServerName())) {
+                response.setStatus(403); // 拒绝访问，防盗链
+                return false;
+            }
         }
+
+        if ("OPTIONS".equals(request.getMethod())) return true;
         
-        // 2. 【核心修复】不管是什么请求，只要带了 Token，先尝试解析并存入 request 域
-        // 这样后面的 Controller 不管是 GET 还是 POST，都能拿到 currentUsername
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
@@ -33,24 +43,21 @@ public class JwtInterceptor implements HandlerInterceptor {
             }
         }
 
-        String uri = request.getRequestURI();
-
-        // 3. 如果是提交评论或提交留言，直接放行（允许游客操作）
+        // 2. 如果是提交评论或提交留言，直接放行（允许游客操作）
         if ("POST".equals(request.getMethod()) && (uri.contains("/comments") || uri.contains("/messages"))) {
             return true;
         }
 
-        // 4. 如果是 GET 请求（查文章、查评论、查留言、查通知），直接放行
+        // 3. 如果是 GET 请求直接放行
         if ("GET".equals(request.getMethod())) {
             return true;
         }
 
-        // 5. 其他请求（POST 发文章 / PUT 改文章 / DELETE 删文章）必须验证 Token
+        // 4. 其他请求必须验证 Token
         if (request.getAttribute("currentUsername") != null) {
-            return true; // 前面已经解析成功了，直接放行
+            return true;
         }
 
-        // 6. Token 无效或没有
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write("{\"message\": \"未登录或登录已过期\"}");

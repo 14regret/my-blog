@@ -13,6 +13,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class SiteController {
+    // ... 构造函数注入保持不变 ...
 
     private final SiteConfigRepository configRepository;
     private final UserRepository userRepository;
@@ -22,33 +23,29 @@ public class SiteController {
         this.userRepository = userRepository;
     }
 
-    // 获取全站配置
+    // ... getConfig/updateConfig 原样保留 ...
     @GetMapping("/config")
     public SiteConfig getConfig() {
         SiteConfig config = configRepository.findAll().stream().findFirst().orElse(new SiteConfig());
-        // 如果没有配置过，给一些默认值
         if (config.getSiteName() == null) config.setSiteName("Mxj 的博客");
         if (config.getSiteSubtitle() == null) config.setSiteSubtitle("那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。");
         return config;
     }
 
-    // 更新全站配置 (仅管理员)
     @PostMapping("/config")
     public SiteConfig updateConfig(@RequestBody SiteConfig newConfig, HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
         if (!"admin".equals(username)) throw new RuntimeException("无权操作");
-        
         SiteConfig config = configRepository.findAll().stream().findFirst().orElse(new SiteConfig());
-        
         config.setAnnouncement(newConfig.getAnnouncement());
         config.setSiteName(newConfig.getSiteName());
         config.setSiteSubtitle(newConfig.getSiteSubtitle());
         config.setSiteFooter(newConfig.getSiteFooter());
         config.setSiteRecord(newConfig.getSiteRecord());
-        
         return configRepository.save(config);
     }
 
+    // 【脱敏修复】返回数据不包含敏感信息，仅保留基础展示
     @GetMapping("/users/{username}/profile")
     public Map<String, Object> getUserProfile(@PathVariable String username) {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -57,6 +54,7 @@ public class SiteController {
         res.put("avatar", user.getAvatar());
         res.put("bio", user.getBio());
         res.put("createdAt", user.getCreatedAt());
+        // 绝对不要放 password 进去
         return res;
     }
 

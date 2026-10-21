@@ -23,24 +23,23 @@ public class NotificationController {
         return notificationRepository.findByReceiverOrderByCreatedAtDesc(username);
     }
 
-    // 获取未读消息数量
     @GetMapping("/unread-count")
     public long getUnreadCount(HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
         return notificationRepository.countByReceiverAndIsReadFalse(username);
     }
 
-    // 标记为已读
     @PutMapping("/{id}/read")
-    public void markAsRead(@PathVariable Long id) {
+    public void markAsRead(@PathVariable Long id, HttpServletRequest request) {
+        String username = (String) request.getAttribute("currentUsername");
         Notification noti = notificationRepository.findById(id).orElse(null);
-        if (noti != null) {
+        // 【越权修复】只能操作自己的消息
+        if (noti != null && noti.getReceiver().equals(username)) {
             noti.setIsRead(true);
             notificationRepository.save(noti);
         }
     }
 
-    // 全部标记已读
     @PutMapping("/read-all")
     public void markAllAsRead(HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
