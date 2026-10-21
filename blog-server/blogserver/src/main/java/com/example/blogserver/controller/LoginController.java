@@ -22,7 +22,6 @@ public class LoginController {
         this.userRepository = userRepository;
     }
 
-    // 【新增】注册接口
     @PostMapping("/register")
     public Map<String, String> register(@RequestBody Map<String, String> registerData) {
         String username = registerData.get("username");
@@ -34,23 +33,20 @@ public class LoginController {
             return result;
         }
 
-        // 检查用户名是否已存在
         if (userRepository.findByUsername(username).isPresent()) {
             result.put("message", "用户名已存在，请换一个");
             return result;
         }
 
-        // 创建新用户
         User user = new User();
         user.setUsername(username);
-        user.setPassword(PasswordUtil.hashPassword(password)); // 加密存储
+        user.setPassword(PasswordUtil.hashPassword(password)); // 使用 BCrypt 加密
         userRepository.save(user);
 
         result.put("message", "注册成功");
         return result;
     }
 
-    // 【修改】登录接口（改为查数据库）
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody Map<String, String> loginData) {
         String username = loginData.get("username");
@@ -59,8 +55,8 @@ public class LoginController {
 
         Optional<User> userOpt = userRepository.findByUsername(username);
         
-        // 如果用户存在，且输入的密码加密后与数据库中的密码一致
-        if (userOpt.isPresent() && userOpt.get().getPassword().equals(PasswordUtil.hashPassword(password))) {
+        // 使用 PasswordUtil.checkPassword 进行校验
+        if (userOpt.isPresent() && PasswordUtil.checkPassword(password, userOpt.get().getPassword())) {
             String token = jwtUtil.generateToken(username);
             result.put("token", token);
             result.put("message", "登录成功");

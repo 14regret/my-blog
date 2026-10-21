@@ -1,12 +1,13 @@
 package com.example.blogserver.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comments")
 public class Comment {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -14,15 +15,17 @@ public class Comment {
     @Column(nullable = false)
     private Long postId;
 
+    @NotBlank(message = "昵称不能为空")
+    @Size(max = 50, message = "昵称长度不能超过50个字符")
     @Column(nullable = false)
     private String author;
 
+    @NotBlank(message = "评论内容不能为空")
+    @Size(max = 500, message = "评论内容不能超过500个字符")
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     private LocalDateTime createdAt;
-
-    // 【新增】父评论 ID。如果为 null，说明是顶级评论；否则是回复某条评论
     private Long parentId;
 
     @PrePersist
@@ -30,7 +33,6 @@ public class Comment {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getPostId() { return postId; }

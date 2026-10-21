@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import request from './axiosConfig'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize' // 【新增】
 
 // 常用表情库
 const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😎','🤔','😭','😡','🥳','🤯','😴','👻','💩','👍','👎','👏','🙏','❤️','💔','⭐','🔥','🎉','💯','✨','🎈','🌹','🍺','🍉']
@@ -201,9 +202,11 @@ export default function PostDetail() {
 
             <div className="post-content" id="post-content" ref={contentRef} style={{ fontSize: `${fontSize}px` }}>
               <ReactMarkdown
+                rehypePlugins={[rehypeSanitize]} // 【新增】过滤危险的 HTML 标签
                 components={{
                   img: (props) => <img {...props} style={{ cursor: 'zoom-in', maxWidth: '100%', borderRadius: '8px' }} onClick={() => setLightboxSrc(props.src)} alt={props.alt || '图片'} />
                 }}
+
               >
                 {post.content}
               </ReactMarkdown>

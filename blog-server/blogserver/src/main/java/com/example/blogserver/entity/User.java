@@ -1,5 +1,6 @@
 package com.example.blogserver.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -13,15 +14,13 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // 允许前端传入，但不允许序列化给前端
     @Column(nullable = false)
     private String password;
 
-    // 【新增】头像链接和个性签名
     private String avatar;
-    
     @Column(columnDefinition = "TEXT")
     private String bio;
-
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -29,7 +28,6 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }

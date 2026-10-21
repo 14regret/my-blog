@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/favorites")
@@ -35,7 +36,9 @@ public class FavoriteController {
     @PostMapping("/{postId}")
     public boolean toggleFavorite(@PathVariable Long postId, HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
-        var existing = favoriteRepository.findByPostIdAndUsername(postId, username);
+        
+        // 【修复】去掉 var，改成明确的 Optional<Favorite> 类型
+        Optional<Favorite> existing = favoriteRepository.findByPostIdAndUsername(postId, username);
         
         if (existing.isPresent()) {
             favoriteRepository.delete(existing.get());

@@ -6,7 +6,8 @@ import com.example.blogserver.entity.Post;
 import com.example.blogserver.repository.CommentRepository;
 import com.example.blogserver.repository.NotificationRepository;
 import com.example.blogserver.repository.PostRepository;
-import com.example.blogserver.util.SensitiveWordUtil; // 【引入敏感词工具】
+import com.example.blogserver.util.SensitiveWordUtil;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,15 +38,16 @@ public class CommentController {
     }
 
     @PostMapping("/posts/{postId}/comments")
-    public Comment addComment(@PathVariable Long postId, @RequestBody Comment comment) {
+    public Comment addComment(@PathVariable Long postId, @Valid @RequestBody Comment comment) {
         comment.setPostId(postId);
         
-        // 【核心修复】过滤敏感词
+        // 敏感词过滤
         comment.setContent(SensitiveWordUtil.filter(comment.getContent()));
         comment.setAuthor(SensitiveWordUtil.filter(comment.getAuthor()));
 
         Comment saved = commentRepository.save(comment);
 
+        // 发送通知逻辑
         try {
             Post post = postRepository.findById(postId).orElse(null);
             if (post != null) {
