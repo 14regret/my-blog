@@ -26,7 +26,6 @@ public class PostController {
         this.revisionRepository = revisionRepository;
     }
 
-    // ... (前面的代码保持原样，省略部分以节省空间，你直接粘贴全量)
     @GetMapping
     public Page<Post> getAllPosts(
             @RequestParam(defaultValue = "0") int page,
@@ -50,28 +49,39 @@ public class PostController {
         }
     }
 
+    // 【修复】获取单篇文章：草稿需验证权限
     @GetMapping("/{id}")
-    public Post getPostById(@PathVariable Long id) {
+    public ResponseEntity<?> getPostById(@PathVariable Long id, HttpServletRequest request) {
         Post post = postRepository.findById(id).orElse(null);
-        if (post != null && !Boolean.TRUE.equals(post.getIsDraft())) {
+        if (post == null) return ResponseEntity.notFound().build();
+
+        if (Boolean.TRUE.equals(post.getIsDraft())) {
+            String currentUsername = (String) request.getAttribute("currentUsername");
+            if (currentUsername == null || (!"admin".equals(currentUsername) && !currentUsername.equals(post.getAuthor()))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("无权查看该草稿");
+            }
+        } else {
             post.setViews(post.getViews() + 1);
             postRepository.save(post);
         }
-        return post;
+        return ResponseEntity.ok(post);
     }
 
-    // 【新增】获取相关文章（基于分类）
     @GetMapping("/{id}/related")
     public List<Post> getRelatedPosts(@PathVariable Long id) {
         Post post = postRepository.findById(id).orElse(null);
         if (post == null || post.getCategory() == null) return List.of();
-        
-        // 查询同分类的最新3篇文章（排除自己）
         PageRequest limit = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdAt"));
         return postRepository.findByCategoryAndIdNotAndIsDraftIsNullOrIsDraftFalse(post.getCategory(), id, limit);
     }
 
-    // ... (点赞、新增、更新、删除等接口保持不变) ...
+    @GetMapping("/random")
+    public ResponseEntity<?> getRandomPost() {
+        Post post = postRepository.findRandomPost();
+        if (post != null) return ResponseEntity.ok(post);
+        return ResponseEntity.notFound().build();
+    }
+
     @PutMapping("/{id}/like")
     public Post likePost(@PathVariable Long id) {
         Post post = postRepository.findById(id).orElse(null);
@@ -125,18 +135,7 @@ public class PostController {
     }
 
     @GetMapping("/{id}/revisions")
-        // 【新增】获取随机一篇文章（用于随机漫游）
-   
     public List<ArticleRevision> getRevisions(@PathVariable Long id) {
         return revisionRepository.findByPostIdOrderByCreatedAtDesc(id);
-    }
-        // 【新增】获取随机一篇文章（用于随机漫游）
-    @GetMapping("/random")
-    public ResponseEntity<?> getRandomPost() {
-        Post post = postRepository.findRandomPost();
-        if (post != null) {
-            return ResponseEntity.ok(post);
-        }
-        return ResponseEntity.notFound().build();
     }
 }

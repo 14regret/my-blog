@@ -9,13 +9,15 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final JwtInterceptor jwtInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final UploadInterceptor uploadInterceptor; // 新增
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
-    public WebConfig(JwtInterceptor jwtInterceptor, RateLimitInterceptor rateLimitInterceptor) {
+    public WebConfig(JwtInterceptor jwtInterceptor, RateLimitInterceptor rateLimitInterceptor, UploadInterceptor uploadInterceptor) {
         this.jwtInterceptor = jwtInterceptor;
         this.rateLimitInterceptor = rateLimitInterceptor;
+        this.uploadInterceptor = uploadInterceptor;
     }
 
     @Override
@@ -36,12 +38,15 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 限流拦截器优先级最高
-        registry.addInterceptor(rateLimitInterceptor).addPathPatterns("/**");
+        // 限流
+        registry.addInterceptor(rateLimitInterceptor).addPathPatterns("/api/**");
         
-        // JWT 鉴权拦截器
+        // 鉴权
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/auth/**");
+
+        // 防盗链
+        registry.addInterceptor(uploadInterceptor).addPathPatterns("/uploads/**");
     }
 }

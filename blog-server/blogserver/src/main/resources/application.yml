@@ -3,22 +3,19 @@ server:
 
 spring:
   datasource:
-    # 连接我们刚刚建好的 blog_db 数据库
     url: jdbc:mysql://localhost:3306/blog_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    # 【注意】这里填你真实的 MySQL 密码
-    password: qwer0987
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:qwer0987} # 生产环境通过环境变量注入
 
   jpa:
     hibernate:
-      # update: 如果没有表，会自动帮你建表
       ddl-auto: update
-    show-sql: true
+    show-sql: false # 生产环境建议关闭
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect 
+        dialect: org.hibernate.dialect.MySQLDialect
         
   servlet:
     multipart:
@@ -26,7 +23,12 @@ spring:
       max-request-size: 5MB
 
 jwt:
-  secret: MxjSuperSecretKeyForBlogJwtAuthenticationMustBeLongEnough2026
+  # 生产环境务必在服务器通过 export JWT_SECRET=xxx 覆盖
+  secret: ${JWT_SECRET:MxjSuperSecretKeyForBlogJwtAuthenticationMustBeLongEnough2026}
 
 cors:
-  allowed-origins: "http://localhost:5173,http://127.0.0.1:5173"
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+
+# 新增站点域名配置
+app:
+  domain: ${APP_DOMAIN:http://localhost:8080}

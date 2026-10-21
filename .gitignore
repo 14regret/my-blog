@@ -1,41 +1,68 @@
 # =========================================
 # 🚀 前端忽略项 (React + Vite)
 # =========================================
-node_modules/      # 依赖包（极度重要！千万不能传）
-dist/              # 打包构建后的静态文件
-.vite/             # Vite 缓存
-npm-debug.log*     # 报错日志
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # =========================================
 # ☕ 后端忽略项 (Spring Boot + Maven)
 # =========================================
-target/            # Maven 编译后的 .class 和 .jar 文件（极度重要！）
-.mvn/              # Maven 包装器
-mvnw
-mvnw.cmd
-*.class            # 编译后的 Java 文件
-*.log              # 运行日志
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.log
+logs/
 
 # =========================================
-# 💾 业务数据忽略项 (极度重要！)
+# 🔒 敏感数据与隐私文件 (极度重要)
 # =========================================
-data/              # H2 数据库本地文件（包含你的测试文章和用户密码，绝不能公开）
-uploads/           # 用户上传的图片文件（传到 Git 会让仓库爆炸）
-*.db               # 其他数据库文件
-*.mp3              # 如果你有本地测试音乐也可以忽略（但 bgm.mp3 放在 public 里，这里不影响）
+# 本地用户上传的图片（绝对不能传，否则仓库会爆炸）
+uploads/
+
+# 如果你以后创建了本地专用的配置文件（如密码等），也在此屏蔽
+application-local.yml
+application-prod.yml
+.env
+.env.local
+
+# 如果还有以前 H2 数据库的遗留文件，一并屏蔽
+data/
+*.db
+*.mv.db
+*.trace.db
 
 # =========================================
 # 💻 编辑器与操作系统忽略项
 # =========================================
-.vscode/           # VSCode 的个人配置（包含本地路径）
-.idea/             # IntelliJ IDEA 配置
+.vscode/
+.idea/
 *.iml
-.DS_Store          # Mac 系统的隐藏文件
-Thumbs.db          # Windows 系统的缩略图文件
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache
+
+# Mac 系统文件
+.DS_Store
+
+# Windows 系统文件
+Thumbs.db
+Desktop.ini
 
 # =========================================
-# 💻 配置的skill
+# 💻 添加的skill
 # =========================================
 .dsh/

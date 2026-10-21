@@ -2,6 +2,7 @@ package com.example.blogserver.controller;
 
 import com.example.blogserver.entity.Post;
 import com.example.blogserver.repository.PostRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,9 @@ import java.util.List;
 @RestController
 public class RssController {
 
+    @Value("${app.domain}") // 【修复】注入域名配置
+    private String domain;
+
     private final PostRepository postRepository;
 
     public RssController(PostRepository postRepository) {
@@ -21,12 +25,8 @@ public class RssController {
 
     @GetMapping(value = "/rss.xml", produces = "application/rss+xml;charset=UTF-8")
     public String getRssFeed() {
-        // 获取最新 20 篇已发布的文章
         PageRequest pageRequest = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<Post> posts = postRepository.findByIsDraftIsNullOrIsDraftFalse(pageRequest).getContent();
-
-        // 你的博客真实域名（如果是本地测试可以写 localhost，上线后改成真实域名）
-        String domain = "http://localhost:5173"; 
 
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
@@ -44,13 +44,8 @@ public class RssController {
             xml.append("    <title>").append(escapeXml(post.getTitle())).append("</title>\n");
             xml.append("    <link>").append(domain).append("/post/").append(post.getId()).append("</link>\n");
             
-            // 截取纯文本作为摘要，去除 Markdown 符号
-            String plainText = post.getContent().replaceAll("!\\[.*?\\]\\(.*?\\)", "")
-                                              .replaceAll("[#*`>\\[\\]]", "")
-                                              .trim();
-            if (plainText.length() > 150) {
-                plainText = plainText.substring(0, 150) + "...";
-            }
+            String plainText = post.getContent().replaceAll("!\\[.*?\\]\\(.*?\\)", "").replaceAll("[#*`>\\[\\]]", "").trim();
+            if (plainText.length() > 150) plainText = plainText.substring(0, 150) + "...";
             
             xml.append("    <description>").append(escapeXml(plainText)).append("</description>\n");
             xml.append("    <pubDate>").append(post.getCreatedAt().format(formatter)).append("</pubDate>\n");
@@ -60,17 +55,11 @@ public class RssController {
 
         xml.append("</channel>\n");
         xml.append("</rss>");
-
         return xml.toString();
     }
 
-    // 转义 XML 特殊字符，防止报错
     private String escapeXml(String text) {
         if (text == null) return "";
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
     }
 }
