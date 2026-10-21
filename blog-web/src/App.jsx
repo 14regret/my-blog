@@ -13,8 +13,8 @@ import MessageBoard from './MessageBoard'
 import MusicPlayer from './MusicPlayer'
 import Profile from './Profile'
 import FriendLinks from './FriendLinks'
-import './App.css'
 import Notifications from './Notifications'
+import './App.css'
 
 const getPlainText = (markdown) => {
   if (!markdown) return ''
@@ -37,16 +37,27 @@ function Home() {
   
   const [tagCloud, setTagCloud] = useState([])
 
-  const pageSize = 5
-  const fullSubtitle = "那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。"
+  // 【动态站点配置】
+  const [siteConfig, setSiteConfig] = useState({ siteName: 'Mxj 的博客', siteSubtitle: "那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。" })
+
+  // 打字机状态
   const [displaySubtitle, setDisplaySubtitle] = useState('')
   const [charIndex, setCharIndex] = useState(0)
 
   useEffect(() => {
-    document.title = 'Mxj 的博客 - 记录生活与技术'
+    // 拉取配置
+    request.get('/config').then(res => {
+      setSiteConfig({
+        siteName: res.data.siteName || 'Mxj 的博客',
+        siteSubtitle: res.data.siteSubtitle || "那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。"
+      })
+      document.title = res.data.siteName || 'Mxj 的博客'
+    }).catch(err => console.error(err))
   }, [])
 
   useEffect(() => {
+    // 打字机逻辑依赖动态副标题
+    const fullSubtitle = siteConfig.siteSubtitle
     if (charIndex < fullSubtitle.length) {
       const timer = setTimeout(() => {
         setDisplaySubtitle(prev => prev + fullSubtitle[charIndex])
@@ -54,7 +65,7 @@ function Home() {
       }, 150)
       return () => clearTimeout(timer)
     }
-  }, [charIndex, fullSubtitle])
+  }, [charIndex, siteConfig.siteSubtitle])
 
   useEffect(() => {
     request.get('/posts?page=0&size=999').then(res => {
@@ -87,7 +98,7 @@ function Home() {
       }, 0)
       return () => clearTimeout(timer)
     } else {
-      let url = `/posts?page=${page}&size=${pageSize}`
+      let url = `/posts?page=${page}&size=5`
       if (filterType === 'category') url += `&category=${filterValue}`
       if (filterType === 'tag') url += `&tag=${filterValue}`
       
@@ -135,7 +146,7 @@ function Home() {
       })
   }
 
-  const titleText = "欢迎来到 Mxj 的博客"
+  const titleText = `欢迎来到 ${siteConfig.siteName}`;
 
   return (
     <>

@@ -7,9 +7,11 @@ import org.springframework.web.servlet.config.annotation.*;
 public class WebConfig implements WebMvcConfigurer {
 
     private final JwtInterceptor jwtInterceptor;
+    private final RateLimitInterceptor rateLimitInterceptor;
 
-    public WebConfig(JwtInterceptor jwtInterceptor) {
+    public WebConfig(JwtInterceptor jwtInterceptor, RateLimitInterceptor rateLimitInterceptor) {
         this.jwtInterceptor = jwtInterceptor;
+        this.rateLimitInterceptor = rateLimitInterceptor;
     }
 
     @Override
@@ -30,10 +32,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 拦截所有 /api/ 开头的请求
+        // 【核心】限流拦截器优先执行，防刷
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/**");
+
+        // JWT 鉴权拦截器
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/api/**")
-                // 【关键】放行登录接口！否则登录请求没带 Token 会被直接拦截报 401
-                .excludePathPatterns("/api/auth/**"); 
+                .excludePathPatterns("/api/auth/**");
     }
 }

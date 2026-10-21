@@ -6,6 +6,7 @@ import com.example.blogserver.entity.Post;
 import com.example.blogserver.repository.CommentRepository;
 import com.example.blogserver.repository.NotificationRepository;
 import com.example.blogserver.repository.PostRepository;
+import com.example.blogserver.util.SensitiveWordUtil; // 【引入敏感词工具】
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,16 +39,19 @@ public class CommentController {
     @PostMapping("/posts/{postId}/comments")
     public Comment addComment(@PathVariable Long postId, @RequestBody Comment comment) {
         comment.setPostId(postId);
+        
+        // 【核心修复】过滤敏感词
+        comment.setContent(SensitiveWordUtil.filter(comment.getContent()));
+        comment.setAuthor(SensitiveWordUtil.filter(comment.getAuthor()));
+
         Comment saved = commentRepository.save(comment);
 
-        // 【核心业务】发送通知逻辑
         try {
             Post post = postRepository.findById(postId).orElse(null);
             if (post != null) {
                 String postAuthor = post.getAuthor();
                 String commenter = saved.getAuthor();
 
-                // 1. 如果是回复别人的评论（有 parentId）
                 if (saved.getParentId() != null) {
                     Comment parentComment = commentRepository.findById(saved.getParentId()).orElse(null);
                     if (parentComment != null && !parentComment.getAuthor().equals(commenter)) {
@@ -58,9 +62,7 @@ public class CommentController {
                         noti.setPostId(postId);
                         notificationRepository.save(noti);
                     }
-                } 
-                // 2. 如果是直接评论文章（并且评论者不是作者本人）
-                else if (!postAuthor.equals(commenter)) {
+                } else if (!postAuthor.equals(commenter)) {
                     Notification noti = new Notification();
                     noti.setReceiver(postAuthor);
                     noti.setSender(commenter);

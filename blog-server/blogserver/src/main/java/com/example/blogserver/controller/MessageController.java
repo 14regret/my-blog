@@ -2,6 +2,7 @@ package com.example.blogserver.controller;
 
 import com.example.blogserver.entity.Message;
 import com.example.blogserver.repository.MessageRepository;
+import com.example.blogserver.util.SensitiveWordUtil; // 【引入敏感词工具】
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -10,7 +11,10 @@ import java.util.List;
 @RequestMapping("/api/messages")
 public class MessageController {
     private final MessageRepository messageRepository;
-    public MessageController(MessageRepository messageRepository) { this.messageRepository = messageRepository; }
+    
+    public MessageController(MessageRepository messageRepository) { 
+        this.messageRepository = messageRepository; 
+    }
 
     @GetMapping
     public List<Message> getAllMessages() {
@@ -19,6 +23,9 @@ public class MessageController {
 
     @PostMapping
     public Message addMessage(@RequestBody Message message) {
+        // 【核心修复】过滤敏感词
+        message.setContent(SensitiveWordUtil.filter(message.getContent()));
+        message.setAuthor(SensitiveWordUtil.filter(message.getAuthor()));
         return messageRepository.save(message);
     }
 

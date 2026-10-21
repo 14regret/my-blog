@@ -22,28 +22,33 @@ public class SiteController {
         this.userRepository = userRepository;
     }
 
-    // 获取公告
-    @GetMapping("/config/announcement")
-    public Map<String, String> getAnnouncement() {
+    // 获取全站配置
+    @GetMapping("/config")
+    public SiteConfig getConfig() {
         SiteConfig config = configRepository.findAll().stream().findFirst().orElse(new SiteConfig());
-        Map<String, String> res = new HashMap<>();
-        res.put("announcement", config.getAnnouncement() == null ? "" : config.getAnnouncement());
-        return res;
+        // 如果没有配置过，给一些默认值
+        if (config.getSiteName() == null) config.setSiteName("Mxj 的博客");
+        if (config.getSiteSubtitle() == null) config.setSiteSubtitle("那些生死悲欢，你以为是人世一生，可月亮见得太多了，知道那只是沉埃一瞬。");
+        return config;
     }
 
-    // 修改公告 (仅管理员)
-    @PostMapping("/config/announcement")
-    public Map<String, String> updateAnnouncement(@RequestBody Map<String, String> body, HttpServletRequest request) {
+    // 更新全站配置 (仅管理员)
+    @PostMapping("/config")
+    public SiteConfig updateConfig(@RequestBody SiteConfig newConfig, HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
         if (!"admin".equals(username)) throw new RuntimeException("无权操作");
         
         SiteConfig config = configRepository.findAll().stream().findFirst().orElse(new SiteConfig());
-        config.setAnnouncement(body.get("announcement"));
-        configRepository.save(config);
-        return body;
+        
+        config.setAnnouncement(newConfig.getAnnouncement());
+        config.setSiteName(newConfig.getSiteName());
+        config.setSiteSubtitle(newConfig.getSiteSubtitle());
+        config.setSiteFooter(newConfig.getSiteFooter());
+        config.setSiteRecord(newConfig.getSiteRecord());
+        
+        return configRepository.save(config);
     }
 
-    // 获取用户资料
     @GetMapping("/users/{username}/profile")
     public Map<String, Object> getUserProfile(@PathVariable String username) {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -55,7 +60,6 @@ public class SiteController {
         return res;
     }
 
-    // 更新当前用户资料
     @PostMapping("/users/profile")
     public void updateProfile(@RequestBody Map<String, String> body, HttpServletRequest request) {
         String username = (String) request.getAttribute("currentUsername");
